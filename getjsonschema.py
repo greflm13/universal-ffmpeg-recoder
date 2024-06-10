@@ -23,7 +23,7 @@ class CustomDateTime(TypedSchemaStrategy):
         self.format = "date-time"
 
     @classmethod
-    def match_object(self, obj):
+    def match_object(cls, obj):
         super().match_object(obj)
         try:
             date_time_obj = datetime.datetime.strptime(obj, "%Y-%m-%dT%H:%M:%S.%f%z")
@@ -50,10 +50,11 @@ class CustomSchemaBuilder(SchemaBuilder):
 
 def main():
     filelist = []
-    # searchpath = "/"
-    searchpath = os.getcwd()
+    objects = []
+    searchpath = "/"
+    # searchpath = os.getcwd()
     builder = CustomSchemaBuilder()
-    builder.add_schema({"type": "object", "properties": {}})
+    builder.add_schema({"type": "object", "properties": {}, "$schema": "http://json-schema.org/draft/2020-12/schema"})
     print(f"Checking if file {os.getcwd()}/{searchpath.replace('/', '_')}-filelist.json exists")
     if os.path.exists(os.getcwd() + "/" + searchpath.replace("/", "_") + "-filelist.json"):
         with open(os.getcwd() + "/" + searchpath.replace("/", "_") + "-filelist.json", "r", encoding="utf-8") as f:
@@ -106,9 +107,13 @@ def main():
         ffprobe, err = p.communicate()
         obj = json.loads(ffprobe.decode("utf-8"))
         builder.add_object(obj)
+        objects.append(obj)
     print("Writing JSON schema...")
     with open("schema.json", "w", encoding="utf-8") as f:
         f.write(builder.to_json(indent=2))
+    print("Writing full JSON...")
+    with open("possible.json", "w", encoding="utf-8") as f:
+        f.write(json.dumps(objects, indent=2))
     print("Done!")
 
 
