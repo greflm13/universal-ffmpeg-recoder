@@ -130,6 +130,7 @@ def audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding
         or stream.tags.language == "deu"
         or stream.tags.language == "jpn"
         or stream.tags.language == "und"
+        or stream.tags.language is None
     ):
         if stream.codec_name == "ac3" or stream.codec_name == "eac3" or stream.codec_name == "truehd" or stream.codec_name == "dts":
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
@@ -325,6 +326,7 @@ def recode(file: str, name: str | None = None):
     arecoding = False
     changedefault = False
 
+    # ffmpeg_command.extend(["ffmpeg", "-hwaccel", "auto", "-i", os.path.realpath(file)])
     ffmpeg_command.extend(["ffmpeg", "-v", "quiet", "-stats", "-hwaccel", "auto", "-i", os.path.realpath(file)])
 
     if name is None:
@@ -394,9 +396,9 @@ def recode(file: str, name: str | None = None):
         return
     ffmpeg_command.extend(ffmpeg_dispositions)
     ffmpeg_command.extend(["-f", "matroska", "-y", "/tmp/" + os.path.basename(output_file)])
-    # print(FFMPEG_COMMAND)
+    # print(ffmpeg_command)
 
-    # Run FFMPEG_COMMAND and print live output
+    # Run ffmpeg_command and print live output
     with Popen(ffmpeg_command, stdout=PIPE, stderr=STDOUT) as process:
         for c in iter(lambda: process.stdout.read(1), b""):
             sys.stdout.buffer.write(c)
@@ -404,7 +406,7 @@ def recode(file: str, name: str | None = None):
         process.wait()
 
     # Rename old file
-    os.rename(os.path.realpath(file), os.path.realpath(file) + ".old")
+    shutil.move(os.path.realpath(file), os.path.realpath(file) + ".old")
 
     # Move tempfile to output_file
     print(
