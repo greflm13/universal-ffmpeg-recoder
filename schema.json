@@ -2,271 +2,64 @@
   "$schema": "http://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "format": {
-      "properties": {
-        "bit_rate": {
-          "type": "string"
-        },
-        "duration": {
-          "type": "string"
-        },
-        "filename": {
-          "type": "string"
-        },
-        "format_long_name": {
-          "type": "string"
-        },
-        "format_name": {
-          "type": "string"
-        },
-        "nb_programs": {
-          "type": "integer"
-        },
-        "nb_streams": {
-          "type": "integer"
-        },
-        "probe_score": {
-          "type": "integer"
-        },
-        "size": {
-          "type": "string"
-        },
-        "start_time": {
-          "type": "string"
-        },
-        "tags": {
-          "properties": {
-            "ARTIST": {
-              "type": "string"
-            },
-            "artist": {
-              "type": "string"
-            },
-            "audiodelay": {
-              "type": "string"
-            },
-            "bitrate": {
-              "type": "string"
-            },
-            "canSeekToEnd": {
-              "type": "string"
-            },
-            "com.android.capture.fps": {
-              "type": "string"
-            },
-            "com.android.version": {
-              "type": "string"
-            },
-            "com.apple.quicktime.author": {
-              "type": "string"
-            },
-            "COM.APPLE.QUICKTIME.AUTHOR": {
-              "type": "string"
-            },
-            "com.apple.quicktime.description": {
-              "type": "string"
-            },
-            "COM.APPLE.QUICKTIME.DESCRIPTION": {
-              "type": "string"
-            },
-            "com.apple.quicktime.displayname": {
-              "type": "string"
-            },
-            "COM.APPLE.QUICKTIME.DISPLAYNAME": {
-              "type": "string"
-            },
-            "com.apple.quicktime.keywords": {
-              "type": "string"
-            },
-            "COM.APPLE.QUICKTIME.KEYWORDS": {
-              "type": "string"
-            },
-            "com.apple.quicktime.title": {
-              "type": "string"
-            },
-            "COM.APPLE.QUICKTIME.TITLE": {
-              "type": "string"
-            },
-            "comment": {
-              "type": "string"
-            },
-            "COMMENT": {
-              "type": "string"
-            },
-            "COMPATIBLE_BRANDS": {
-              "type": "string"
-            },
-            "compatible_brands": {
-              "type": "string"
-            },
-            "composer": {
-              "type": "string"
-            },
-            "creation_time": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "format": "date-time",
-                  "type": "string"
-                }
-              ]
-            },
-            "creationdate": {
-              "type": "string"
-            },
-            "DATE": {
-              "type": "string"
-            },
-            "date": {
-              "type": "string"
-            },
-            "DESCRIPTION": {
-              "type": "string"
-            },
-            "description": {
-              "type": "string"
-            },
-            "ENCODER": {
-              "type": "string"
-            },
-            "encoder": {
-              "type": "string"
-            },
-            "encoder-eng": {
-              "type": "string"
-            },
-            "episode_sort": {
-              "type": "string"
-            },
-            "FILE": {
-              "type": "string"
-            },
-            "hd_video": {
-              "type": "string"
-            },
-            "Hw": {
-              "type": "string"
-            },
-            "iTunMOVI": {
-              "type": "string"
-            },
-            "KEYWORDS": {
-              "type": "string"
-            },
-            "location": {
-              "type": "string"
-            },
-            "MAJOR_BRAND": {
-              "type": "string"
-            },
-            "major_brand": {
-              "type": "string"
-            },
-            "maxrate": {
-              "type": "string"
-            },
-            "media_type": {
-              "type": "string"
-            },
-            "MINOR_VERSION": {
-              "type": "string"
-            },
-            "minor_version": {
-              "type": "string"
-            },
-            "modification_time": {
-              "format": "date-time",
-              "type": "string"
-            },
-            "PURL": {
-              "type": "string"
-            },
-            "SCENE": {
-              "type": "string"
-            },
-            "season_number": {
-              "type": "string"
-            },
-            "software": {
-              "type": "string"
-            },
-            "SYNOPSIS": {
-              "type": "string"
-            },
-            "synopsis": {
-              "type": "string"
-            },
-            "te_is_reencode": {
-              "type": "string"
-            },
-            "TIMECODE": {
-              "type": "string"
-            },
-            "title": {
-              "type": "string"
-            },
-            "Writing frontend": {
-              "type": "string"
-            }
-          },
-          "type": "object"
-        }
-      },
-      "required": ["bit_rate", "duration", "filename", "format_long_name", "format_name", "nb_programs", "nb_streams", "probe_score", "size"],
-      "type": "object"
-    },
     "streams": {
+      "type": "array",
       "items": {
+        "type": "object",
         "properties": {
-          "avg_frame_rate": {
-            "type": "string"
-          },
-          "bit_rate": {
-            "type": "string"
-          },
-          "bits_per_raw_sample": {
-            "type": "string"
-          },
-          "bits_per_sample": {
+          "index": {
             "type": "integer"
-          },
-          "channel_layout": {
-            "type": "string"
-          },
-          "channels": {
-            "type": "integer"
-          },
-          "chroma_location": {
-            "type": "string"
-          },
-          "closed_captions": {
-            "type": "integer"
-          },
-          "codec_long_name": {
-            "type": "string"
           },
           "codec_name": {
             "type": "string"
           },
-          "codec_tag": {
+          "codec_long_name": {
             "type": "string"
           },
-          "codec_tag_string": {
+          "profile": {
             "type": "string"
           },
           "codec_type": {
             "type": "string"
           },
-          "coded_height": {
+          "codec_tag_string": {
+            "type": "string"
+          },
+          "codec_tag": {
+            "type": "string"
+          },
+          "width": {
+            "type": "integer"
+          },
+          "height": {
             "type": "integer"
           },
           "coded_width": {
             "type": "integer"
           },
-          "color_primaries": {
+          "coded_height": {
+            "type": "integer"
+          },
+          "closed_captions": {
+            "type": "integer"
+          },
+          "film_grain": {
+            "type": "integer"
+          },
+          "has_b_frames": {
+            "type": "integer"
+          },
+          "sample_aspect_ratio": {
             "type": "string"
+          },
+          "display_aspect_ratio": {
+            "type": "string"
+          },
+          "pix_fmt": {
+            "type": "string"
+          },
+          "level": {
+            "type": "integer"
           },
           "color_range": {
             "type": "string"
@@ -277,33 +70,52 @@
           "color_transfer": {
             "type": "string"
           },
-          "display_aspect_ratio": {
+          "color_primaries": {
             "type": "string"
           },
+          "chroma_location": {
+            "type": "string"
+          },
+          "refs": {
+            "type": "integer"
+          },
+          "r_frame_rate": {
+            "type": "string"
+          },
+          "avg_frame_rate": {
+            "type": "string"
+          },
+          "time_base": {
+            "type": "string"
+          },
+          "start_pts": {
+            "type": "integer"
+          },
+          "start_time": {
+            "type": "string"
+          },
+          "extradata_size": {
+            "type": "integer"
+          },
           "disposition": {
+            "type": "object",
             "properties": {
-              "attached_pic": {
+              "default": {
                 "type": "integer"
               },
-              "captions": {
+              "dub": {
                 "type": "integer"
               },
-              "clean_effects": {
+              "original": {
                 "type": "integer"
               },
               "comment": {
                 "type": "integer"
               },
-              "default": {
+              "lyrics": {
                 "type": "integer"
               },
-              "dependent": {
-                "type": "integer"
-              },
-              "descriptions": {
-                "type": "integer"
-              },
-              "dub": {
+              "karaoke": {
                 "type": "integer"
               },
               "forced": {
@@ -312,99 +124,153 @@
               "hearing_impaired": {
                 "type": "integer"
               },
-              "karaoke": {
+              "visual_impaired": {
                 "type": "integer"
               },
-              "lyrics": {
+              "clean_effects": {
                 "type": "integer"
               },
-              "metadata": {
-                "type": "integer"
-              },
-              "non_diegetic": {
-                "type": "integer"
-              },
-              "original": {
-                "type": "integer"
-              },
-              "still_image": {
+              "attached_pic": {
                 "type": "integer"
               },
               "timed_thumbnails": {
                 "type": "integer"
               },
-              "visual_impaired": {
+              "non_diegetic": {
+                "type": "integer"
+              },
+              "captions": {
+                "type": "integer"
+              },
+              "descriptions": {
+                "type": "integer"
+              },
+              "metadata": {
+                "type": "integer"
+              },
+              "dependent": {
+                "type": "integer"
+              },
+              "still_image": {
                 "type": "integer"
               }
             },
-            "required": ["attached_pic", "captions", "clean_effects", "comment", "default", "dependent", "descriptions", "dub", "forced", "hearing_impaired", "karaoke", "lyrics", "metadata", "non_diegetic", "original", "still_image", "timed_thumbnails", "visual_impaired"],
-            "type": "object"
+            "required": [
+              "attached_pic",
+              "captions",
+              "clean_effects",
+              "comment",
+              "default",
+              "dependent",
+              "descriptions",
+              "dub",
+              "forced",
+              "hearing_impaired",
+              "karaoke",
+              "lyrics",
+              "metadata",
+              "non_diegetic",
+              "original",
+              "still_image",
+              "timed_thumbnails",
+              "visual_impaired"
+            ]
           },
-          "divx_packed": {
-            "type": "string"
-          },
-          "duration": {
-            "type": "string"
-          },
-          "duration_ts": {
-            "type": "integer"
-          },
-          "extradata_size": {
-            "type": "integer"
-          },
-          "field_order": {
-            "type": "string"
-          },
-          "film_grain": {
-            "type": "integer"
-          },
-          "has_b_frames": {
-            "type": "integer"
-          },
-          "height": {
-            "type": "integer"
-          },
-          "id": {
-            "type": "string"
-          },
-          "index": {
-            "type": "integer"
-          },
-          "initial_padding": {
-            "type": "integer"
-          },
-          "is_avc": {
-            "type": "string"
-          },
-          "level": {
-            "type": "integer"
-          },
-          "missing_streams": {
-            "type": "string"
-          },
-          "nal_length_size": {
-            "type": "string"
-          },
-          "nb_frames": {
-            "type": "string"
-          },
-          "pix_fmt": {
-            "type": "string"
-          },
-          "profile": {
-            "type": "string"
-          },
-          "quarter_sample": {
-            "type": "string"
-          },
-          "r_frame_rate": {
-            "type": "string"
-          },
-          "refs": {
-            "type": "integer"
-          },
-          "sample_aspect_ratio": {
-            "type": "string"
+          "tags": {
+            "type": "object",
+            "properties": {
+              "DURATION": {
+                "type": "string"
+              },
+              "language": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "ENCODER": {
+                "type": "string"
+              },
+              "BPS-eng": {
+                "type": "string"
+              },
+              "DURATION-eng": {
+                "type": "string"
+              },
+              "NUMBER_OF_FRAMES-eng": {
+                "type": "string"
+              },
+              "NUMBER_OF_BYTES-eng": {
+                "type": "string"
+              },
+              "_STATISTICS_WRITING_APP-eng": {
+                "type": "string"
+              },
+              "_STATISTICS_WRITING_DATE_UTC-eng": {
+                "type": "string"
+              },
+              "_STATISTICS_TAGS-eng": {
+                "type": "string"
+              },
+              "HANDLER_NAME": {
+                "type": "string"
+              },
+              "VENDOR_ID": {
+                "type": "string"
+              },
+              "BPS": {
+                "type": "string"
+              },
+              "NUMBER_OF_FRAMES": {
+                "type": "string"
+              },
+              "NUMBER_OF_BYTES": {
+                "type": "string"
+              },
+              "_STATISTICS_WRITING_APP": {
+                "type": "string"
+              },
+              "_STATISTICS_WRITING_DATE_UTC": {
+                "type": "string"
+              },
+              "_STATISTICS_TAGS": {
+                "type": "string"
+              },
+              "creation_time": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "handler_name": {
+                "type": "string"
+              },
+              "vendor_id": {
+                "type": "string"
+              },
+              "encoder": {
+                "type": "string"
+              },
+              "timecode": {
+                "type": "string"
+              },
+              "alpha_mode": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "mimetype": {
+                "type": "string"
+              },
+              "SOURCE_ID-eng": {
+                "type": "string"
+              },
+              "SOURCE_ID": {
+                "type": "string"
+              },
+              "TIMECODE": {
+                "type": "string"
+              }
+            }
           },
           "sample_fmt": {
             "type": "string"
@@ -412,19 +278,60 @@
           "sample_rate": {
             "type": "string"
           },
+          "channels": {
+            "type": "integer"
+          },
+          "channel_layout": {
+            "type": "string"
+          },
+          "bits_per_sample": {
+            "type": "integer"
+          },
+          "initial_padding": {
+            "type": "integer"
+          },
+          "bit_rate": {
+            "type": "string"
+          },
+          "duration_ts": {
+            "type": "integer"
+          },
+          "duration": {
+            "type": "string"
+          },
+          "field_order": {
+            "type": "string"
+          },
+          "is_avc": {
+            "type": "string"
+          },
+          "nal_length_size": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "bits_per_raw_sample": {
+            "type": "string"
+          },
+          "nb_frames": {
+            "type": "string"
+          },
           "side_data_list": {
+            "type": "array",
             "items": {
+              "type": "object",
               "properties": {
-                "avg_bitrate": {
-                  "type": "integer"
+                "side_data_type": {
+                  "type": "string"
                 },
-                "buffer_size": {
+                "service_type": {
                   "type": "integer"
                 },
                 "displaymatrix": {
                   "type": "string"
                 },
-                "inverted": {
+                "rotation": {
                   "type": "integer"
                 },
                 "max_bitrate": {
@@ -433,152 +340,289 @@
                 "min_bitrate": {
                   "type": "integer"
                 },
-                "pitch": {
+                "avg_bitrate": {
+                  "type": "integer"
+                },
+                "buffer_size": {
+                  "type": "integer"
+                },
+                "vbv_delay": {
+                  "type": "integer"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "inverted": {
                   "type": "integer"
                 },
                 "projection": {
                   "type": "string"
                 },
-                "roll": {
-                  "type": "integer"
-                },
-                "rotation": {
-                  "type": "integer"
-                },
-                "service_type": {
-                  "type": "integer"
-                },
-                "side_data_type": {
-                  "type": "string"
-                },
-                "type": {
-                  "type": "string"
-                },
-                "vbv_delay": {
-                  "type": "integer"
-                },
                 "yaw": {
+                  "type": "integer"
+                },
+                "pitch": {
+                  "type": "integer"
+                },
+                "roll": {
                   "type": "integer"
                 }
               },
-              "required": ["side_data_type"],
-              "type": "object"
-            },
-            "type": "array"
+              "required": [
+                "side_data_type"
+              ]
+            }
           },
-          "start_pts": {
-            "type": "integer"
-          },
-          "start_time": {
+          "quarter_sample": {
             "type": "string"
           },
-          "tags": {
-            "properties": {
-              "_STATISTICS_TAGS": {
-                "type": "string"
-              },
-              "_STATISTICS_TAGS-eng": {
-                "type": "string"
-              },
-              "_STATISTICS_WRITING_APP": {
-                "type": "string"
-              },
-              "_STATISTICS_WRITING_APP-eng": {
-                "type": "string"
-              },
-              "_STATISTICS_WRITING_DATE_UTC": {
-                "type": "string"
-              },
-              "_STATISTICS_WRITING_DATE_UTC-eng": {
-                "type": "string"
-              },
-              "alpha_mode": {
-                "type": "string"
-              },
-              "BPS": {
-                "type": "string"
-              },
-              "BPS-eng": {
-                "type": "string"
-              },
-              "creation_time": {
-                "format": "date-time",
-                "type": "string"
-              },
-              "DURATION": {
-                "type": "string"
-              },
-              "DURATION-eng": {
-                "type": "string"
-              },
-              "ENCODER": {
-                "type": "string"
-              },
-              "encoder": {
-                "type": "string"
-              },
-              "filename": {
-                "type": "string"
-              },
-              "HANDLER_NAME": {
-                "type": "string"
-              },
-              "handler_name": {
-                "type": "string"
-              },
-              "language": {
-                "type": "string"
-              },
-              "mimetype": {
-                "type": "string"
-              },
-              "NUMBER_OF_BYTES": {
-                "type": "string"
-              },
-              "NUMBER_OF_BYTES-eng": {
-                "type": "string"
-              },
-              "NUMBER_OF_FRAMES": {
-                "type": "string"
-              },
-              "NUMBER_OF_FRAMES-eng": {
-                "type": "string"
-              },
-              "SOURCE_ID": {
-                "type": "string"
-              },
-              "SOURCE_ID-eng": {
-                "type": "string"
-              },
-              "timecode": {
-                "type": "string"
-              },
-              "TIMECODE": {
-                "type": "string"
-              },
-              "title": {
-                "type": "string"
-              },
-              "VENDOR_ID": {
-                "type": "string"
-              },
-              "vendor_id": {
-                "type": "string"
-              }
-            },
-            "type": "object"
-          },
-          "time_base": {
+          "divx_packed": {
             "type": "string"
           },
-          "width": {
-            "type": "integer"
+          "missing_streams": {
+            "type": "string"
           }
         },
-        "required": ["avg_frame_rate", "codec_tag", "codec_tag_string", "codec_type", "disposition", "index", "r_frame_rate", "time_base"],
-        "type": "object"
+        "required": [
+          "avg_frame_rate",
+          "codec_tag",
+          "codec_tag_string",
+          "codec_type",
+          "disposition",
+          "index",
+          "r_frame_rate",
+          "time_base"
+        ]
+      }
+    },
+    "format": {
+      "type": "object",
+      "properties": {
+        "filename": {
+          "type": "string"
+        },
+        "nb_streams": {
+          "type": "integer"
+        },
+        "nb_programs": {
+          "type": "integer"
+        },
+        "format_name": {
+          "type": "string"
+        },
+        "format_long_name": {
+          "type": "string"
+        },
+        "start_time": {
+          "type": "string"
+        },
+        "duration": {
+          "type": "string"
+        },
+        "size": {
+          "type": "string"
+        },
+        "bit_rate": {
+          "type": "string"
+        },
+        "probe_score": {
+          "type": "integer"
+        },
+        "tags": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "ENCODER": {
+              "type": "string"
+            },
+            "COMPATIBLE_BRANDS": {
+              "type": "string"
+            },
+            "MAJOR_BRAND": {
+              "type": "string"
+            },
+            "MINOR_VERSION": {
+              "type": "string"
+            },
+            "major_brand": {
+              "type": "string"
+            },
+            "minor_version": {
+              "type": "string"
+            },
+            "compatible_brands": {
+              "type": "string"
+            },
+            "creation_time": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              ]
+            },
+            "com.apple.quicktime.keywords": {
+              "type": "string"
+            },
+            "com.apple.quicktime.description": {
+              "type": "string"
+            },
+            "com.apple.quicktime.author": {
+              "type": "string"
+            },
+            "com.apple.quicktime.displayname": {
+              "type": "string"
+            },
+            "com.apple.quicktime.title": {
+              "type": "string"
+            },
+            "encoder": {
+              "type": "string"
+            },
+            "comment": {
+              "type": "string"
+            },
+            "hd_video": {
+              "type": "string"
+            },
+            "SCENE": {
+              "type": "string"
+            },
+            "FILE": {
+              "type": "string"
+            },
+            "DATE": {
+              "type": "string"
+            },
+            "date": {
+              "type": "string"
+            },
+            "Writing frontend": {
+              "type": "string"
+            },
+            "PURL": {
+              "type": "string"
+            },
+            "COMMENT": {
+              "type": "string"
+            },
+            "ARTIST": {
+              "type": "string"
+            },
+            "DESCRIPTION": {
+              "type": "string"
+            },
+            "SYNOPSIS": {
+              "type": "string"
+            },
+            "artist": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "synopsis": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "com.android.version": {
+              "type": "string"
+            },
+            "com.android.capture.fps": {
+              "type": "string"
+            },
+            "encoder-eng": {
+              "type": "string"
+            },
+            "TIMECODE": {
+              "type": "string"
+            },
+            "composer": {
+              "type": "string"
+            },
+            "media_type": {
+              "type": "string"
+            },
+            "season_number": {
+              "type": "string"
+            },
+            "episode_sort": {
+              "type": "string"
+            },
+            "iTunMOVI": {
+              "type": "string"
+            },
+            "KEYWORDS": {
+              "type": "string"
+            },
+            "COM.APPLE.QUICKTIME.TITLE": {
+              "type": "string"
+            },
+            "COM.APPLE.QUICKTIME.DESCRIPTION": {
+              "type": "string"
+            },
+            "COM.APPLE.QUICKTIME.AUTHOR": {
+              "type": "string"
+            },
+            "COM.APPLE.QUICKTIME.DISPLAYNAME": {
+              "type": "string"
+            },
+            "COM.APPLE.QUICKTIME.KEYWORDS": {
+              "type": "string"
+            },
+            "software": {
+              "type": "string"
+            },
+            "modification_time": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "Hw": {
+              "type": "string"
+            },
+            "bitrate": {
+              "type": "string"
+            },
+            "maxrate": {
+              "type": "string"
+            },
+            "te_is_reencode": {
+              "type": "string"
+            },
+            "audiodelay": {
+              "type": "string"
+            },
+            "canSeekToEnd": {
+              "type": "string"
+            },
+            "creationdate": {
+              "type": "string"
+            }
+          }
+        }
       },
-      "type": "array"
+      "required": [
+        "bit_rate",
+        "duration",
+        "filename",
+        "format_long_name",
+        "format_name",
+        "nb_programs",
+        "nb_streams",
+        "probe_score",
+        "size"
+      ]
     }
-  }
+  },
+  "required": [
+    "format",
+    "streams"
+  ]
 }
