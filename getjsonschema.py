@@ -48,54 +48,57 @@ class CustomSchemaBuilder(SchemaBuilder):
     EXTRA_STRATEGIES = (CustomDateTime,)
 
 
-def main():
+def generate_filelist(searchpath):
     filelist = []
+    with Popen(
+        [
+            "sudo",
+            "find",
+            searchpath,
+            "-name",
+            "*.mkv",
+            "-or",
+            "-name",
+            "*.mp4",
+            "-or",
+            "-name",
+            "*.avi",
+            "-or",
+            "-name",
+            "*.webm",
+            "-or",
+            "-name",
+            "*.flv",
+            "-or",
+            "-name",
+            "*.mov",
+        ],
+        stdout=PIPE,
+        stderr=PIPE,
+    ) as find:
+        out, err = find.communicate()
+        if err:
+            print(f"Error finding files: {err.decode('utf-8')}")
+        filelist = out.decode("utf-8").split("\n")
+    return filelist
+
+
+def main():
     objects = []
     searchpath = "/"
+    filelist_path = os.path.join(os.getcwd(), f"{searchpath.replace('/', '_')}-filelist.json")
     # searchpath = os.getcwd()
     builder = CustomSchemaBuilder()
     builder.add_schema({"type": "object", "properties": {}, "$schema": "http://json-schema.org/draft/2020-12/schema"})
-    print(f"Checking if file {os.getcwd()}/{searchpath.replace('/', '_')}-filelist.json exists")
-    if os.path.exists(os.getcwd() + "/" + searchpath.replace("/", "_") + "-filelist.json"):
-        with open(os.getcwd() + "/" + searchpath.replace("/", "_") + "-filelist.json", "r", encoding="utf-8") as f:
+    if os.path.exists(filelist_path):
+        print(f"Loading file list from {filelist_path}")
+        with open(filelist_path, "r", encoding="utf-8") as f:
             filelist = json.loads(f.read())
     else:
         print("Generating file list...")
-        with Popen(
-            [
-                "sudo",
-                "find",
-                searchpath,
-                "-name",
-                "*.mkv",
-                "-or",
-                "-name",
-                "*.mp4",
-                "-or",
-                "-name",
-                "*.avi",
-                "-or",
-                "-name",
-                "*.webm",
-                "-or",
-                "-name",
-                "*.flv",
-                "-or",
-                "-name",
-                "*.mov",
-            ],
-            stdout=PIPE,
-            stderr=PIPE,
-        ) as find:
-            out, err = find.communicate()
-            try:
-                files = out.decode("utf-8")
-            except:
-                print(err)
-            for file in files.split("\n"):
-                filelist.append(file)
-            with open(os.getcwd() + "/" + searchpath.replace("/", "_") + "-filelist.json", "w", encoding="utf-8") as f:
-                f.write(json.dumps(filelist))
+        filelist = generate_filelist(searchpath)
+        with open(filelist_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps(filelist))
     print("Generating JSON schema...")
     for file in filelist:
         print(f"Checking file {file}...")
@@ -106,8 +109,12 @@ def main():
         )
         ffprobe, err = p.communicate()
         obj = json.loads(ffprobe.decode("utf-8"))
-        builder.add_object(obj)
-        objects.append(obj)
+        if "format" in obj.keys():
+            builder.add_object(obj)
+            objects.append(obj)
+            print("Writing Object...")
+            with open("objects/" + str(hash(obj["format"]["filename"].replace("/", "_"))) + ".json", "w", encoding="utf-8") as f:
+                f.write(json.dumps(obj, indent=2))
     print("Writing JSON schema...")
     with open("schema.json", "w", encoding="utf-8") as f:
         f.write(builder.to_json(indent=2))
