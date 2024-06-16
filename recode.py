@@ -88,7 +88,7 @@ def get_series_name(series: str, file: str):
                 ep = ep + "E" + episode.rjust(2, "0")
         name = series + " - S" + match.groups()[0].rjust(2, "0") + ep + ".mkv"
         season = "Season " + match.groups()[0].rjust(2, "0")
-        return season, name
+    return season, name
 
 
 def recode_series(folder: str):
@@ -121,87 +121,29 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
     return vrecoding, vindex
 
 
-def audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list):
-    if stream.tags is None:
-        stream.tags = StreamTags.from_dict({"title": None})
-    if (
-        stream.tags.language == "eng"
-        or stream.tags.language == "ger"
-        or stream.tags.language == "deu"
-        or stream.tags.language == "jpn"
-        or stream.tags.language == "und"
-        or stream.tags.language is None
-    ):
-        if stream.codec_name == "ac3" or stream.codec_name == "eac3" or stream.codec_name == "truehd" or stream.codec_name == "dts":
-            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-            ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
-            print(
-                f"Copying    {Color.GREEN}audio{Style.RESET_ALL}    stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.BLUE}{stream.codec_name}{Style.RESET_ALL}, language {Color.BLUE}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
-            )
-        else:
-            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-            ffmpeg_recoding.extend([f"-c:a:{aindex}", "ac3"])
-            arecoding = True
-            stream.codec_name = "ac3"
-            print(
-                f"Converting {Color.GREEN}audio{Style.RESET_ALL}    stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.BLUE}ac3{Style.RESET_ALL}, language {Color.BLUE}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
-            )
-        obj = stream.to_dict()
-        obj["newindex"] = aindex
-        astreams.append(obj)
+def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list):
+    if stream.codec_name == "ac3" or stream.codec_name == "eac3" or stream.codec_name == "truehd" or stream.codec_name == "dts":
+        ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+        ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
+        print(
+            f"Copying    {Color.GREEN}audio{Style.RESET_ALL}    stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.BLUE}{stream.codec_name}{Style.RESET_ALL}, language {Color.BLUE}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
+        )
+    else:
+        ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+        ffmpeg_recoding.extend([f"-c:a:{aindex}", "ac3"])
+        arecoding = True
+        stream.codec_name = "ac3"
+        print(
+            f"Converting {Color.GREEN}audio{Style.RESET_ALL}    stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.BLUE}ac3{Style.RESET_ALL}, language {Color.BLUE}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
+        )
+    obj = stream.to_dict()
+    obj["newindex"] = aindex
+    astreams.append(obj)
 
-        match stream.tags.language:
-            case "eng":
-                if adefault["lang"] == "eng" or adefault["lang"] == "und" or adefault["lang"] is None:
-                    if stream.codec_name != adefault["codec"] or stream.channels > adefault["channels"]:
-                        match adefault["codec"]:
-                            case "aac":
-                                if (
-                                    stream.codec_name == "ac3"
-                                    or stream.codec_name == "eac3"
-                                    or stream.codec_name == "truehd"
-                                    or stream.codec_name == "dts"
-                                    or stream.channels > adefault["channels"]
-                                ):
-                                    adefault["aindex"] = aindex
-                                    adefault["codec"] = stream.codec_name
-                                    adefault["lang"] = stream.tags.language
-                                    adefault["oindex"] = stream.index
-                                    adefault["channels"] = stream.channels
-                            case "ac3":
-                                if (
-                                    stream.codec_name == "eac3"
-                                    or stream.codec_name == "truehd"
-                                    or stream.codec_name == "dts"
-                                    or stream.channels > adefault["channels"]
-                                ):
-                                    adefault["aindex"] = aindex
-                                    adefault["codec"] = stream.codec_name
-                                    adefault["lang"] = stream.tags.language
-                                    adefault["oindex"] = stream.index
-                                    adefault["channels"] = stream.channels
-                            case "eac3":
-                                if stream.codec_name == "truehd" or stream.codec_name == "dts" or stream.channels > adefault["channels"]:
-                                    adefault["aindex"] = aindex
-                                    adefault["codec"] = stream.codec_name
-                                    adefault["lang"] = stream.tags.language
-                                    adefault["oindex"] = stream.index
-                                    adefault["channels"] = stream.channels
-                            case "dts":
-                                if stream.codec_name == "truehd" or stream.channels > adefault["channels"]:
-                                    adefault["aindex"] = aindex
-                                    adefault["codec"] = stream.codec_name
-                                    adefault["lang"] = stream.tags.language
-                                    adefault["oindex"] = stream.index
-                                    adefault["channels"] = stream.channels
-                            case None:
-                                adefault["aindex"] = aindex
-                                adefault["codec"] = stream.codec_name
-                                adefault["lang"] = stream.tags.language
-                                adefault["oindex"] = stream.index
-                                adefault["channels"] = stream.channels
-            case "jpn":
-                if adefault["lang"] != "jpn" or stream.codec_name != adefault["codec"]:
+    match stream.tags.language:
+        case "eng":
+            if adefault["lang"] == "eng" or adefault["lang"] == "und" or adefault["lang"] is None:
+                if stream.codec_name != adefault["codec"] or stream.channels > adefault["channels"]:
                     match adefault["codec"]:
                         case "aac":
                             if (
@@ -214,38 +156,101 @@ def audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding
                                 adefault["aindex"] = aindex
                                 adefault["codec"] = stream.codec_name
                                 adefault["lang"] = stream.tags.language
+                                adefault["oindex"] = stream.index
                                 adefault["channels"] = stream.channels
                         case "ac3":
                             if (
                                 stream.codec_name == "eac3"
                                 or stream.codec_name == "truehd"
                                 or stream.codec_name == "dts"
-                                or adefault["lang"] != "jpn"
                                 or stream.channels > adefault["channels"]
                             ):
                                 adefault["aindex"] = aindex
                                 adefault["codec"] = stream.codec_name
                                 adefault["lang"] = stream.tags.language
+                                adefault["oindex"] = stream.index
                                 adefault["channels"] = stream.channels
                         case "eac3":
                             if stream.codec_name == "truehd" or stream.codec_name == "dts" or stream.channels > adefault["channels"]:
                                 adefault["aindex"] = aindex
                                 adefault["codec"] = stream.codec_name
                                 adefault["lang"] = stream.tags.language
+                                adefault["oindex"] = stream.index
                                 adefault["channels"] = stream.channels
                         case "dts":
                             if stream.codec_name == "truehd" or stream.channels > adefault["channels"]:
                                 adefault["aindex"] = aindex
                                 adefault["codec"] = stream.codec_name
                                 adefault["lang"] = stream.tags.language
+                                adefault["oindex"] = stream.index
                                 adefault["channels"] = stream.channels
                         case None:
                             adefault["aindex"] = aindex
                             adefault["codec"] = stream.codec_name
                             adefault["lang"] = stream.tags.language
+                            adefault["oindex"] = stream.index
                             adefault["channels"] = stream.channels
+        case "jpn":
+            if adefault["lang"] != "jpn" or stream.codec_name != adefault["codec"]:
+                match adefault["codec"]:
+                    case "aac":
+                        if (
+                            stream.codec_name == "ac3"
+                            or stream.codec_name == "eac3"
+                            or stream.codec_name == "truehd"
+                            or stream.codec_name == "dts"
+                            or stream.channels > adefault["channels"]
+                        ):
+                            adefault["aindex"] = aindex
+                            adefault["codec"] = stream.codec_name
+                            adefault["lang"] = stream.tags.language
+                            adefault["channels"] = stream.channels
+                    case "ac3":
+                        if (
+                            stream.codec_name == "eac3"
+                            or stream.codec_name == "truehd"
+                            or stream.codec_name == "dts"
+                            or adefault["lang"] != "jpn"
+                            or stream.channels > adefault["channels"]
+                        ):
+                            adefault["aindex"] = aindex
+                            adefault["codec"] = stream.codec_name
+                            adefault["lang"] = stream.tags.language
+                            adefault["channels"] = stream.channels
+                    case "eac3":
+                        if stream.codec_name == "truehd" or stream.codec_name == "dts" or stream.channels > adefault["channels"]:
+                            adefault["aindex"] = aindex
+                            adefault["codec"] = stream.codec_name
+                            adefault["lang"] = stream.tags.language
+                            adefault["channels"] = stream.channels
+                    case "dts":
+                        if stream.codec_name == "truehd" or stream.channels > adefault["channels"]:
+                            adefault["aindex"] = aindex
+                            adefault["codec"] = stream.codec_name
+                            adefault["lang"] = stream.tags.language
+                            adefault["channels"] = stream.channels
+                    case None:
+                        adefault["aindex"] = aindex
+                        adefault["codec"] = stream.codec_name
+                        adefault["lang"] = stream.tags.language
+                        adefault["channels"] = stream.channels
+    return arecoding
+
+
+def audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list):
+    if stream.tags is None:
+        stream.tags = StreamTags.from_dict({"title": None})
+    if (
+        stream.tags.language == "eng"
+        or stream.tags.language == "ger"
+        or stream.tags.language == "deu"
+        or stream.tags.language == "jpn"
+        or stream.tags.language == "und"
+        or stream.tags.language is None
+    ):
+        arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams)
         aindex += 1
-        return arecoding, aindex
+    return arecoding, aindex
 
 
 def subtitles(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, sindex: int, sdefault: dict, sstreams: list):
@@ -302,7 +307,7 @@ def subtitles(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, sinde
                         sdefault["type"] = "default"
                         sdefault["lang"] = stream.tags.language
         sindex += 1
-        return sindex
+    return sindex
 
 
 def recode(file: str, name: str | None = None):
@@ -358,6 +363,13 @@ def recode(file: str, name: str | None = None):
         if stream.codec_type == "audio":
             arecoding, aindex = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams)
 
+    if aindex == 0:
+        for stream in ffprobe.streams:
+            if stream.codec_type == "audio":
+                arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams)
+                aindex += 1
+
+    for stream in ffprobe.streams:
         if stream.codec_type == "subtitle":
             sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams)
 
