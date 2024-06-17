@@ -79,7 +79,7 @@ def get_movie_name(file: str):
 
 
 def get_series_name(series: str, file: str):
-    match = re.search(r"[Ss](\d{1,4})(([Ee]\d{1,4})*)", file)
+    match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})*)", file)
     if match:
         episodes = match.groups()[1].replace("e", "E").split("E")
         ep = ""
@@ -456,10 +456,16 @@ def main():
             series = os.path.basename(folder)
             for dire in os.listdir(folder):
                 for file in os.listdir(os.path.realpath(dire)):
-                    season, name = get_series_name(series, file)
+                    try:
+                        season, name = get_series_name(series, file)
+                    except:
+                        continue
                     if not os.path.exists(os.path.join(os.path.realpath(folder), season)):
                         os.mkdir(os.path.join(os.path.realpath(folder), season))
-                    shutil.move(os.path.realpath(file), season + "/" + name)
+                    shutil.move(
+                        os.path.join(os.path.realpath(dire), file),
+                        os.path.splitext(os.path.join(folder, season, name))[0] + os.path.splitext(file)[1],
+                    )
         for container in VIDEO_CONTAINERS:
             if sys.argv[1].endswith(container):
                 recode(sys.argv[1])
