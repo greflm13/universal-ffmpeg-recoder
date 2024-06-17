@@ -451,6 +451,15 @@ def main():
             else:
                 for file in os.listdir(sys.argv[1]):
                     recode(sys.argv[1] + "/" + file)
+        elif sys.argv[1] == "rename":
+            folder = os.getcwd()
+            series = os.path.basename(folder)
+            for dire in os.listdir(folder):
+                for file in os.listdir(os.path.realpath(dire)):
+                    season, name = get_series_name(series, file)
+                    if not os.path.exists(os.path.join(os.path.realpath(folder), season)):
+                        os.mkdir(os.path.join(os.path.realpath(folder), season))
+                    shutil.move(os.path.realpath(file), season + "/" + name)
         for container in VIDEO_CONTAINERS:
             if sys.argv[1].endswith(container):
                 recode(sys.argv[1])
