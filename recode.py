@@ -101,7 +101,7 @@ def recode_series(folder: str):
             recode(os.path.join(os.path.realpath(dire), file), season + "/" + name)
 
 
-def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int):
+def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ffmpeg_dispositions: list, vrecoding: bool, vindex: int):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
     if stream.codec_name != "hevc" and stream.disposition.attached_pic == 0:
@@ -111,7 +111,7 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
         print(
             f"Converting {Color.GREEN}video{Style.RESET_ALL}      stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.BLUE}hevc{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
         )
-    else:
+    elif stream.disposition.attached_pic == 0:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
         print(
@@ -359,8 +359,9 @@ def recode(file: str, name: str | None = None):
 
     for stream in ffprobe.streams:
         if stream.codec_type == "video":
-            vrecoding, vindex = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex)
+            vrecoding, vindex = video(stream, ffmpeg_mapping, ffmpeg_recoding, ffmpeg_dispositions, vrecoding, vindex)
 
+    for stream in ffprobe.streams:
         if stream.codec_type == "audio":
             arecoding, aindex = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams)
 
@@ -374,6 +375,7 @@ def recode(file: str, name: str | None = None):
         if stream.codec_type == "subtitle":
             sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams)
 
+    for stream in ffprobe.streams:
         if stream.codec_type == "attachment":
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
             print(
