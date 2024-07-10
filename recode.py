@@ -254,7 +254,7 @@ def recode(file: str, path: str | None = None):
     arecoding = False
     changedefault = False
 
-    ffmpeg_command.extend(["ffmpeg", "-v", "quiet", "-stats", "-hwaccel", "auto", "-i", f'"{os.path.realpath(file)}"'])
+    ffmpeg_command.extend(["ffmpeg", "-v", "quiet", "-stats", "-hwaccel", "auto", "-i", os.path.realpath(file)])
 
     if path is None:
         output_file = get_movie_name(file)
@@ -331,6 +331,7 @@ def recode(file: str, path: str | None = None):
 
     if ffprobe.format.tags.title and ffprobe.format.tags.title != os.path.basename(os.path.splitext(output_file)[0]) or ffprobe.format.tags.title is None:
         ffmpeg_command.extend(["-metadata", f'title="{os.path.basename(os.path.splitext(output_file)[0])}"'])
+        print(f"{Color.RED}Changing {Color.BLUE} title{Style.RESET_ALL} from {Color.CYAN}{ffprobe.format.tags.title}{Style.RESET_ALL} to {Color.CYAN}{os.path.basename(os.path.splitext(output_file)[0])}{Style.RESET_ALL}")
         changedefault = True
 
     ffmpeg_command.extend(ffmpeg_mapping)
@@ -343,7 +344,7 @@ def recode(file: str, path: str | None = None):
         print(f"{Color.RED}No changes to make! Continuing...{Style.RESET_ALL}")
         return
     ffmpeg_command.extend(ffmpeg_dispositions)
-    ffmpeg_command.extend(["-f", "matroska", "-y", '"/tmp/' + os.path.basename(output_file) + '"'])
+    ffmpeg_command.extend(["-f", "matroska", "-y", "/tmp/" + os.path.basename(output_file)])
     # print(ffmpeg_command)
 
     # Run ffmpeg_command and print live output
