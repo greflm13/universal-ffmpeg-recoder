@@ -331,6 +331,7 @@ def recode(file: str, path: str | None = None):
 
     if ffprobe.format.tags.title and ffprobe.format.tags.title != os.path.basename(os.path.splitext(output_file)[0]) or ffprobe.format.tags.title is None:
         ffmpeg_command.extend(["-metadata", f'title="{os.path.basename(os.path.splitext(output_file)[0])}"'])
+        changedefault = True
 
     ffmpeg_command.extend(ffmpeg_mapping)
     ffmpeg_command.extend(ffmpeg_recoding)
