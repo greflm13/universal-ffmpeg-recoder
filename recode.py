@@ -5,6 +5,7 @@ import sys
 import json
 import re
 import shutil
+import datetime
 
 from subprocess import Popen, PIPE, STDOUT
 
@@ -347,12 +348,18 @@ def recode(file: str, path: str | None = None):
     ffmpeg_command.extend(["-f", "matroska", "-y", "/tmp/" + os.path.basename(output_file)])
     # print(ffmpeg_command)
 
+    timestart = datetime.datetime.now()
+    print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
+
     # Run ffmpeg_command and print live output
     with Popen(ffmpeg_command, stdout=PIPE, stderr=STDOUT) as process:
         for c in iter(lambda: process.stdout.read(1), b""):
             sys.stdout.buffer.write(c)
             sys.stdout.flush()
         process.wait()
+    timestop = datetime.datetime.now()
+    print(f"Recoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
+    print(f"{Color.RED}Recoding took {Style.RESET_ALL}{timestop - timestart}{Color.RED} seconds{Style.RESET_ALL}")
 
     # Rename old file
     shutil.move(os.path.realpath(file), os.path.realpath(file) + ".old")
