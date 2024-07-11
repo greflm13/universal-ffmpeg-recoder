@@ -330,7 +330,7 @@ def recode(file: str, path: str | None = None):
                 changedefault = True
 
     if ffprobe.format.tags.title and ffprobe.format.tags.title != os.path.basename(os.path.splitext(output_file)[0]) or ffprobe.format.tags.title is None:
-        ffmpeg_command.extend(["-metadata", f'title="{os.path.basename(os.path.splitext(output_file)[0])}"'])
+        ffmpeg_command.extend(["-metadata", f"title={os.path.basename(os.path.splitext(output_file)[0])}"])
         print(f"{Color.RED}Changing {Color.BLUE} title{Style.RESET_ALL} from {Color.CYAN}{ffprobe.format.tags.title}{Style.RESET_ALL} to {Color.CYAN}{os.path.basename(os.path.splitext(output_file)[0])}{Style.RESET_ALL}")
         changedefault = True
 
