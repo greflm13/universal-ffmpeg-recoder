@@ -157,21 +157,15 @@
             },
             "required": [
               "attached_pic",
-              "captions",
               "clean_effects",
               "comment",
               "default",
-              "dependent",
-              "descriptions",
               "dub",
               "forced",
               "hearing_impaired",
               "karaoke",
               "lyrics",
-              "metadata",
-              "non_diegetic",
               "original",
-              "still_image",
               "timed_thumbnails",
               "visual_impaired"
             ]
@@ -268,6 +262,18 @@
                 "type": "string"
               },
               "TIMECODE": {
+                "type": "string"
+              },
+              "LANGUAGE": {
+                "type": "string"
+              },
+              "Source": {
+                "type": "string"
+              },
+              "track": {
+                "type": "string"
+              },
+              "ENCODER_OPTIONS": {
                 "type": "string"
               }
             }
@@ -366,6 +372,42 @@
                 },
                 "roll": {
                   "type": "integer"
+                },
+                "max_content": {
+                  "type": "integer"
+                },
+                "max_average": {
+                  "type": "integer"
+                },
+                "red_x": {
+                  "type": "string"
+                },
+                "red_y": {
+                  "type": "string"
+                },
+                "green_x": {
+                  "type": "string"
+                },
+                "green_y": {
+                  "type": "string"
+                },
+                "blue_x": {
+                  "type": "string"
+                },
+                "blue_y": {
+                  "type": "string"
+                },
+                "white_point_x": {
+                  "type": "string"
+                },
+                "white_point_y": {
+                  "type": "string"
+                },
+                "min_luminance": {
+                  "type": "string"
+                },
+                "max_luminance": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -380,6 +422,21 @@
             "type": "string"
           },
           "missing_streams": {
+            "type": "string"
+          },
+          "dmix_mode": {
+            "type": "string"
+          },
+          "ltrt_cmixlev": {
+            "type": "string"
+          },
+          "ltrt_surmixlev": {
+            "type": "string"
+          },
+          "loro_cmixlev": {
+            "type": "string"
+          },
+          "loro_surmixlev": {
             "type": "string"
           }
         },
@@ -604,13 +661,131 @@
             },
             "creationdate": {
               "type": "string"
+            },
+            "PUBLISHER": {
+              "type": "string"
+            },
+            "TVDB2": {
+              "type": "string"
+            },
+            "released by": {
+              "type": "string"
+            },
+            "contact": {
+              "type": "string"
+            },
+            "Version": {
+              "type": "string"
+            },
+            "ABJ": {
+              "type": "string"
+            },
+            "Filters": {
+              "type": "string"
+            },
+            "Version-eng": {
+              "type": "string"
+            },
+            "MOVIE/ENCODER": {
+              "type": "string"
+            },
+            "Title": {
+              "type": "string"
+            },
+            "IMDB": {
+              "type": "string"
+            },
+            "TMDB": {
+              "type": "string"
+            },
+            "TVDB": {
+              "type": "string"
+            },
+            "SHOW": {
+              "type": "string"
+            },
+            "SEASON_NUMBER": {
+              "type": "string"
+            },
+            "EPISODE_ID": {
+              "type": "string"
+            },
+            "CREATION_TIME": {
+              "type": "string"
+            },
+            "MOVIE/COMMENT": {
+              "type": "string"
+            },
+            "TITLE": {
+              "type": "string"
+            },
+            "ACTOR": {
+              "type": "string"
+            },
+            "DIRECTOR": {
+              "type": "string"
+            },
+            "PRODUCER": {
+              "type": "string"
+            },
+            "SCREENPLAY_BY": {
+              "type": "string"
+            },
+            "WRITTEN_BY": {
+              "type": "string"
+            },
+            "PRODUCTION_STUDIO": {
+              "type": "string"
+            },
+            "GENRE": {
+              "type": "string"
+            },
+            "DATE_RELEASED": {
+              "type": "string"
+            },
+            "DATE_RELEASE": {
+              "type": "string"
+            },
+            "DATE_RECORDED": {
+              "type": "string"
+            },
+            "CONTENT_TYPE": {
+              "type": "string"
+            },
+            "COPYRIGHT": {
+              "type": "string"
+            },
+            "ENCODED_BY": {
+              "type": "string"
+            },
+            "Encoder": {
+              "type": "string"
+            },
+            "": {
+              "type": "string"
+            },
+            "IMDB-eng": {
+              "type": "string"
+            },
+            "SUMMARY": {
+              "type": "string"
+            },
+            "track": {
+              "type": "string"
+            },
+            "TOTAL_PARTS": {
+              "type": "string"
+            },
+            "genre": {
+              "type": "string"
             }
           }
+        },
+        "nb_stream_groups": {
+          "type": "integer"
         }
       },
       "required": [
-        "bit_rate",
-        "duration",
         "filename",
         "format_long_name",
         "format_name",

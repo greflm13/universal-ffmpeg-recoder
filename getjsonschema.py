@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import json
 import datetime
 
@@ -83,11 +84,26 @@ def generate_filelist(searchpath):
     return filelist
 
 
+def existing_json(json_path):
+    builder = CustomSchemaBuilder()
+    builder.add_schema({"type": "object", "properties": {}, "$schema": "http://json-schema.org/draft/2020-12/schema"})
+    with open(json_path, "r", encoding="utf-8") as json_file:
+        data = json.loads(json_file.read())
+        for obj in data:
+            builder.add_object(obj)
+    print("Writing JSON schema...")
+    with open("schema.json", "w", encoding="utf-8") as f:
+        f.write(builder.to_json(indent=2))
+    exit()
+
+
 def main():
+    if len(sys.argv) > 0:
+        existing_json(sys.argv[1])
     objects = []
-    searchpath = "/"
+    # searchpath = "/"
+    searchpath = os.getcwd()
     filelist_path = os.path.join(os.getcwd(), f"{searchpath.replace('/', '_')}-filelist.json")
-    # searchpath = os.getcwd()
     builder = CustomSchemaBuilder()
     builder.add_schema({"type": "object", "properties": {}, "$schema": "http://json-schema.org/draft/2020-12/schema"})
     if os.path.exists(filelist_path):
@@ -113,6 +129,8 @@ def main():
             builder.add_object(obj)
             objects.append(obj)
             print("Writing Object...")
+            if not os.path.exists("objects"):
+                os.mkdir("objects")
             with open("objects/" + str(hash(obj["format"]["filename"].replace("/", "_"))) + ".json", "w", encoding="utf-8") as f:
                 f.write(json.dumps(obj, indent=2))
     print("Writing JSON schema...")

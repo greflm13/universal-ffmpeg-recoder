@@ -15,7 +15,16 @@
                 "program": "${workspaceFolder}/recode.py",
                 "console": "externalTerminal",
                 "args": [],
-                "cwd": "/mnt/nfs/films"
+                "cwd": "/mnt/nfs/series"
+            },
+            {
+                "name": "Generate Schema",
+                "type": "debugpy",
+                "request": "launch",
+                "program": "${workspaceFolder}/getjsonschema.py",
+                "console": "externalTerminal",
+                "args": [],
+                "cwd": "/mnt/nfs"
             }
         ],
         "compounds": []

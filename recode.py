@@ -18,8 +18,15 @@ from ffprobe import Ffprobe, Stream, StreamTags
 colorama_init()
 
 # fmt: off
-VIDEO_CONTAINERS = [".3g2",".3gp",".amv",".asf",".avi",".drc",".f4a",".f4b",".f4p",".f4v",".flv",".gif",".gifv",".M2TS",".m2v",".m4p",".m4v",".mkv",".mng",".mov",".mp2",".mp4",".mpe",".mpeg",".mpg",".mpv",".MTS",".mxf",".nsv",".ogg",".ogv",".qt",".rm",".rmvb",".roq",".svi",".TS",".viv",".vob",".webm",".wmv",".yuv",]
+VIDEO_CONTAINERS = [
+    ".3g2",".3gp",".amv",".asf",".avi",".drc",".f4a",".f4b",".f4p",".f4v",".flv",".gif",".gifv",".M2TS",
+    ".m2v",".m4p",".m4v",".mkv",".mng",".mov",".mp2",".mp4",".mpe",".mpeg",".mpg",".mpv",".MTS",".mxf",
+    ".nsv",".ogg",".ogv",".qt",".rm",".rmvb",".roq",".svi",".TS",".viv",".vob",".webm",".wmv",".yuv",
+]
 # fmt: on
+
+AUDIO_PRIORITY = {"dts": 4, "truehd": 3, "eac3": 2, "ac3": 1}
+SUBTITLE_PRIORITY = {"full": 3, "sdh": 2, None: 1}
 
 
 def get_movie_name(file: str):
@@ -84,7 +91,7 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ffmpeg_di
 
 
 def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list):
-    if stream.codec_name == "ac3" or stream.codec_name == "eac3" or stream.codec_name == "truehd" or stream.codec_name == "dts":
+    if stream.codec_name in ["ac3", "eac3", "truehd", "dts"]:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
         print(f"Copying    {Color.GREEN}audio{Style.RESET_ALL}      stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file")
@@ -98,84 +105,28 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
     obj["newindex"] = aindex
     astreams.append(obj)
 
-    match stream.tags.language:
-        case "eng":
-            if adefault["lang"] == "eng" or adefault["lang"] == "und" or adefault["lang"] is None:
-                if stream.codec_name != adefault["codec"] or stream.channels > adefault["channels"]:
-                    match adefault["codec"]:
-                        case "aac":
-                            if stream.codec_name == "ac3" or stream.codec_name == "eac3" or stream.codec_name == "truehd" or stream.codec_name == "dts" or stream.channels > adefault["channels"]:
-                                adefault["aindex"] = aindex
-                                adefault["codec"] = stream.codec_name
-                                adefault["lang"] = stream.tags.language
-                                adefault["oindex"] = stream.index
-                                adefault["channels"] = stream.channels
-                        case "ac3":
-                            if stream.codec_name == "eac3" or stream.codec_name == "truehd" or stream.codec_name == "dts" or stream.channels > adefault["channels"]:
-                                adefault["aindex"] = aindex
-                                adefault["codec"] = stream.codec_name
-                                adefault["lang"] = stream.tags.language
-                                adefault["oindex"] = stream.index
-                                adefault["channels"] = stream.channels
-                        case "eac3":
-                            if stream.codec_name == "truehd" or stream.codec_name == "dts" or stream.channels > adefault["channels"]:
-                                adefault["aindex"] = aindex
-                                adefault["codec"] = stream.codec_name
-                                adefault["lang"] = stream.tags.language
-                                adefault["oindex"] = stream.index
-                                adefault["channels"] = stream.channels
-                        case "dts":
-                            if stream.codec_name == "truehd" or stream.channels > adefault["channels"]:
-                                adefault["aindex"] = aindex
-                                adefault["codec"] = stream.codec_name
-                                adefault["lang"] = stream.tags.language
-                                adefault["oindex"] = stream.index
-                                adefault["channels"] = stream.channels
-                        case None:
-                            adefault["aindex"] = aindex
-                            adefault["codec"] = stream.codec_name
-                            adefault["lang"] = stream.tags.language
-                            adefault["oindex"] = stream.index
-                            adefault["channels"] = stream.channels
-        case "jpn":
-            if adefault["lang"] != "jpn" or stream.codec_name != adefault["codec"]:
-                match adefault["codec"]:
-                    case "aac":
-                        if stream.codec_name == "ac3" or stream.codec_name == "eac3" or stream.codec_name == "truehd" or stream.codec_name == "dts" or stream.channels > adefault["channels"]:
-                            adefault["aindex"] = aindex
-                            adefault["codec"] = stream.codec_name
-                            adefault["lang"] = stream.tags.language
-                            adefault["channels"] = stream.channels
-                    case "ac3":
-                        if stream.codec_name == "eac3" or stream.codec_name == "truehd" or stream.codec_name == "dts" or adefault["lang"] != "jpn" or stream.channels > adefault["channels"]:
-                            adefault["aindex"] = aindex
-                            adefault["codec"] = stream.codec_name
-                            adefault["lang"] = stream.tags.language
-                            adefault["channels"] = stream.channels
-                    case "eac3":
-                        if stream.codec_name == "truehd" or stream.codec_name == "dts" or stream.channels > adefault["channels"]:
-                            adefault["aindex"] = aindex
-                            adefault["codec"] = stream.codec_name
-                            adefault["lang"] = stream.tags.language
-                            adefault["channels"] = stream.channels
-                    case "dts":
-                        if stream.codec_name == "truehd" or stream.channels > adefault["channels"]:
-                            adefault["aindex"] = aindex
-                            adefault["codec"] = stream.codec_name
-                            adefault["lang"] = stream.tags.language
-                            adefault["channels"] = stream.channels
-                    case None:
-                        adefault["aindex"] = aindex
-                        adefault["codec"] = stream.codec_name
-                        adefault["lang"] = stream.tags.language
-                        adefault["channels"] = stream.channels
+    if stream.tags.language in ["eng", "und", "jpn", None]:
+        update_audio_default(adefault, stream, aindex)
     return arecoding
+
+
+def update_audio_default(adefault: dict, stream: Stream, aindex: int):
+    if (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0)) or (AUDIO_PRIORITY.get(stream.codec_name, 0) == AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels > adefault["channels"]):
+        adefault.update(
+            {
+                "aindex": aindex,
+                "codec": stream.codec_name,
+                "lang": stream.tags.language,
+                "oindex": stream.index,
+                "channels": stream.channels,
+            }
+        )
 
 
 def audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
-    if stream.tags.language == "eng" or stream.tags.language == "ger" or stream.tags.language == "deu" or stream.tags.language == "jpn" or stream.tags.language == "und" or stream.tags.language is None:
+    if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None]:
         arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams)
         aindex += 1
     return arecoding, aindex
@@ -184,8 +135,8 @@ def audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding
 def subtitles(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, sindex: int, sdefault: dict, sstreams: list):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
-    if stream.tags.language == "eng" or stream.tags.language == "ger" or stream.tags.language == "deu" or stream.tags.language == "und":
-        if stream.codec_name == "subrip" or stream.codec_name == "hdmv_pgs_subtitle" or stream.codec_name == "ass":
+    if stream.tags.language in ["eng", "ger", "deu", "und", None]:
+        if stream.codec_name in ["subrip", "hdmv_pgs_subtitle", "ass"]:
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:s:{sindex}", "copy"])
             print(f"Copying    {Color.GREEN}subtitle{Style.RESET_ALL}   stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file")
@@ -197,40 +148,21 @@ def subtitles(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, sinde
         obj = stream.to_dict()
         obj["newindex"] = sindex
         sstreams.append(obj)
-
-        match stream.tags.language:
-            case "eng":
-                if stream.tags.title and "full" in stream.tags.title.lower():
-                    if sdefault["type"] != "full":
-                        sdefault["sindex"] = sindex
-                        sdefault["type"] = "full"
-                        sdefault["lang"] = stream.tags.language
-                elif stream.tags.title and "sdh" in stream.tags.title.lower():
-                    if sdefault["type"] != "sdh":
-                        sdefault["sindex"] = sindex
-                        sdefault["type"] = "sdh"
-                        sdefault["lang"] = stream.tags.language
-                elif sdefault["type"] is None:
-                    sdefault["sindex"] = sindex
-                    sdefault["type"] = "default"
-                    sdefault["lang"] = stream.tags.language
-            case "ger" | "deu":
-                if sdefault["lang"] == "und" or sdefault["lang"] == "ger" or sdefault["lang"] is None:
-                    if stream.tags.title and "full" in stream.tags.title.lower():
-                        if sdefault["type"] != "full":
-                            sdefault["sindex"] = sindex
-                            sdefault["type"] = "full"
-                            sdefault["lang"] = stream.tags.language
-                    elif stream.tags.title and "sdh" in stream.tags.title.lower():
-                        if sdefault["type"] != "sdh":
-                            sdefault["sindex"] = sindex
-                            sdefault["lang"] = stream.tags.language
-                    elif sdefault["type"] is None:
-                        sdefault["sindex"] = sindex
-                        sdefault["type"] = "default"
-                        sdefault["lang"] = stream.tags.language
+        update_subtitle_default(sdefault, stream, sindex)
         sindex += 1
     return sindex
+
+
+def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int):
+    subtitle_type = "none"
+    if stream.tags.title:
+        title_lower = stream.tags.title.lower()
+        if "full" in title_lower:
+            subtitle_type = "full"
+        elif "sdh" in title_lower:
+            subtitle_type = "sdh"
+    if SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0):
+        sdefault.update({"lang": stream.tags.language, "oindex": stream.index, "sindex": sindex, "type": subtitle_type})
 
 
 def recode(file: str, path: str | None = None):
