@@ -74,7 +74,7 @@ def recode_all_series(folder: str):
         recode_series(os.path.join(folder, dire))
 
 
-def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ffmpeg_dispositions: list, vrecoding: bool, vindex: int):
+def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
     if stream.codec_name != "hevc" and stream.disposition.attached_pic == 0:
@@ -204,9 +204,9 @@ def recode(file: str, path: str | None = None):
     out, err = p.communicate()
     try:
         ffprobe = Ffprobe.from_dict(json.loads(out.decode("utf-8")))
-    except:
+    except Exception as err:
         print(f"Error: {err}")
-        raise
+        raise RuntimeError from err
     if ffprobe.streams is None:
         print(f"Error: {file} has no streams")
         return
@@ -223,7 +223,7 @@ def recode(file: str, path: str | None = None):
 
     for stream in ffprobe.streams:
         if stream.codec_type == "video":
-            vrecoding, vindex = video(stream, ffmpeg_mapping, ffmpeg_recoding, ffmpeg_dispositions, vrecoding, vindex)
+            vrecoding, vindex = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex)
 
     for stream in ffprobe.streams:
         if stream.codec_type == "audio":
@@ -291,7 +291,7 @@ def recode(file: str, path: str | None = None):
         process.wait()
     timestop = datetime.datetime.now()
     print(f"Recoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
-    print(f"{Color.RED}Recoding took {Style.RESET_ALL}{timestop - timestart}{Color.RED} seconds{Style.RESET_ALL}")
+    print(f"{Color.RED}Recoding took {Style.RESET_ALL}{timestop - timestart}{Style.RESET_ALL}")
 
     # Rename old file
     shutil.move(os.path.realpath(file), os.path.realpath(file) + ".old")
@@ -321,7 +321,7 @@ def main():
             for file in os.listdir(os.getcwd()):
                 try:
                     recode(file)
-                except:
+                except RuntimeError:
                     continue
     else:
         if os.path.isdir(sys.argv[1]):
@@ -340,7 +340,7 @@ def main():
                 for file in os.listdir(os.path.realpath(dire)):
                     try:
                         season, name = get_series_name(series, file)
-                    except:
+                    except RuntimeError:
                         continue
                     if not os.path.exists(os.path.join(os.path.realpath(folder), season)):
                         os.mkdir(os.path.join(os.path.realpath(folder), season))
