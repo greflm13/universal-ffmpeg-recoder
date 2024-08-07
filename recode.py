@@ -60,8 +60,8 @@ def get_series_name(series: str, file: str):
 
 def recode_series(folder: str):
     series = os.path.basename(folder)
-    for dire in os.listdir(folder):
-        for file in os.listdir(os.path.realpath(os.path.join(folder, dire))):
+    for dire in sorted(os.listdir(folder)):
+        for file in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
             season, name = get_series_name(series, file)
             if name is not None:
                 if not os.path.exists(os.path.join(os.path.realpath(folder), season)):
@@ -70,7 +70,7 @@ def recode_series(folder: str):
 
 
 def recode_all_series(folder: str):
-    for dire in os.listdir(folder):
+    for dire in sorted(os.listdir(folder)):
         recode_series(os.path.join(folder, dire))
 
 
@@ -136,7 +136,7 @@ def subtitles(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, sinde
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
     if stream.tags.language in ["eng", "ger", "deu", "und", None]:
-        if stream.codec_name in ["subrip", "hdmv_pgs_subtitle", "ass"]:
+        if stream.codec_name in ["subrip", "hdmv_pgs_subtitle", "ass", "dvd_subtitle"]:
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:s:{sindex}", "copy"])
             print(f"Copying    {Color.GREEN}subtitle{Style.RESET_ALL}   stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file")
@@ -262,9 +262,13 @@ def recode(file: str, path: str | None = None):
                 print(f"Setting    {Color.GREEN}subtitle{Style.RESET_ALL}   stream {Color.BLUE}s:{sdefault['sindex']}{Style.RESET_ALL} to default")
                 changedefault = True
 
-    if ffprobe.format.tags.title and ffprobe.format.tags.title != os.path.basename(os.path.splitext(output_file)[0]) or ffprobe.format.tags.title is None:
+    if ffprobe.format.tags.title and ffprobe.format.tags.to_dict()["title"] != os.path.basename(os.path.splitext(output_file)[0]):
         ffmpeg_command.extend(["-metadata", f"title={os.path.basename(os.path.splitext(output_file)[0])}"])
-        print(f"{Color.RED}Changing {Color.BLUE} title{Style.RESET_ALL} from {Color.CYAN}{ffprobe.format.tags.title}{Style.RESET_ALL} to {Color.CYAN}{os.path.basename(os.path.splitext(output_file)[0])}{Style.RESET_ALL}")
+        print(f"{Color.RED}Changing {Color.BLUE} title{Style.RESET_ALL} from {Color.CYAN}{ffprobe.format.tags.to_dict()["title"]}{Style.RESET_ALL} to {Color.CYAN}{os.path.basename(os.path.splitext(output_file)[0])}{Style.RESET_ALL}")
+        changedefault = True
+    if "title" not in ffprobe.format.tags.to_dict():
+        ffmpeg_command.extend(["-metadata", f"title={os.path.basename(os.path.splitext(output_file)[0])}"])
+        print(f"{Color.RED}Changing {Color.BLUE} title{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{os.path.basename(os.path.splitext(output_file)[0])}{Style.RESET_ALL}")
         changedefault = True
 
     ffmpeg_command.extend(ffmpeg_mapping)
@@ -278,7 +282,7 @@ def recode(file: str, path: str | None = None):
         return
     ffmpeg_command.extend(ffmpeg_dispositions)
     ffmpeg_command.extend(["-f", "matroska", "-y", "/tmp/" + os.path.basename(output_file)])
-    # print(ffmpeg_command)
+    # print(" ".join(ffmpeg_command))
 
     timestart = datetime.datetime.now()
     print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
@@ -304,12 +308,12 @@ def recode(file: str, path: str | None = None):
 def main():
     notdir = 0
     if len(sys.argv) < 2:
-        for file in os.listdir(os.getcwd()):
+        for file in sorted(os.listdir(os.getcwd())):
             if os.path.isfile(file):
                 notdir += 1
         if notdir == 0:
-            for folder in os.listdir(os.getcwd()):
-                for file in os.listdir(folder):
+            for folder in sorted(os.listdir(os.getcwd())):
+                for file in sorted(os.listdir(folder)):
                     if os.path.isfile(os.path.join(folder, file)):
                         notdir += 1
             if notdir == 0:
@@ -318,26 +322,26 @@ def main():
                 recode_series(os.getcwd())
 
         else:
-            for file in os.listdir(os.getcwd()):
+            for file in sorted(os.listdir(os.getcwd())):
                 try:
                     recode(file)
                 except RuntimeError:
                     continue
     else:
         if os.path.isdir(sys.argv[1]):
-            for file in os.listdir(sys.argv[1]):
-                if os.path.isfile(file):
+            for file in sorted(os.listdir(sys.argv[1])):
+                if os.path.isfile(os.path.join(sys.argv[1], file)):
                     notdir += 1
             if notdir == 0:
                 recode_series(sys.argv[1])
             else:
-                for file in os.listdir(sys.argv[1]):
+                for file in sorted(os.listdir(sys.argv[1])):
                     recode(sys.argv[1] + "/" + file)
         elif sys.argv[1] == "rename":
             folder = os.getcwd()
             series = os.path.basename(folder)
-            for dire in os.listdir(folder):
-                for file in os.listdir(os.path.realpath(dire)):
+            for dire in sorted(os.listdir(folder)):
+                for file in sorted(os.listdir(os.path.realpath(dire))):
                     try:
                         season, name = get_series_name(series, file)
                     except RuntimeError:
