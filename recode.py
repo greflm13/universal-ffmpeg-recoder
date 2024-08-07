@@ -215,6 +215,8 @@ def recode(file: str, path: str | None = None):
     for stream in ffprobe.streams:
         if stream.tags is None:
             stream.tags = StreamTags.from_dict({"title": None, "language": None})
+        if stream.tags.language is None and stream.tags.tags_language is not None:
+            stream.tags.language = stream.tags.tags_language
         if stream.disposition.default:
             disposition = "default"
         else:
