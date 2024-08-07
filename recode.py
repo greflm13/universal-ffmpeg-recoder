@@ -305,6 +305,7 @@ def recode(file: str, path: str | None = None):
     # Move tempfile to output_file
     print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}tempfile{Style.RESET_ALL} file to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
     shutil.move("/tmp/" + os.path.basename(output_file), os.path.realpath(output_file))
+    print(f"{Color.GREEN}Done!{Style.RESET_ALL}")
 
 
 def main():
@@ -343,17 +344,20 @@ def main():
             folder = os.getcwd()
             series = os.path.basename(folder)
             for dire in sorted(os.listdir(folder)):
-                for file in sorted(os.listdir(os.path.realpath(dire))):
-                    try:
-                        season, name = get_series_name(series, file)
-                    except RuntimeError:
-                        continue
-                    if not os.path.exists(os.path.join(os.path.realpath(folder), season)):
-                        os.mkdir(os.path.join(os.path.realpath(folder), season))
-                    shutil.move(
-                        os.path.join(os.path.realpath(dire), file),
-                        os.path.splitext(os.path.join(folder, season, name))[0] + os.path.splitext(file)[1],
-                    )
+                if not os.path.isfile(os.path.join(folder, dire)):
+                    for file in sorted(os.listdir(os.path.realpath(dire))):
+                        try:
+                            season, name = get_series_name(series, file)
+                        except RuntimeError:
+                            continue
+                        if season is not None:
+                            old = os.path.join(folder, dire, file)
+                            new = os.path.splitext(os.path.join(folder, season, name))[0] + os.path.splitext(file)[1]
+                            if old != new:
+                                if not os.path.exists(os.path.join(folder, season)):
+                                    os.mkdir(os.path.join(folder, season))
+                                print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
+                                shutil.move(old, new)
         for container in VIDEO_CONTAINERS:
             if sys.argv[1].endswith(container):
                 recode(sys.argv[1])
