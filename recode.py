@@ -26,7 +26,7 @@ VIDEO_CONTAINERS = [
 # fmt: on
 
 AUDIO_PRIORITY = {"dts": 4, "truehd": 3, "eac3": 2, "ac3": 1}
-SUBTITLE_PRIORITY = {"full": 3, "sdh": 2, None: 1}
+SUBTITLE_PRIORITY = {"full": 3, "sdh": 2, "none": 1}
 
 
 def get_movie_name(file: str):
