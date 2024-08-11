@@ -6,8 +6,11 @@ import json
 import re
 import shutil
 import datetime
+import urllib.parse
 
 from subprocess import Popen, PIPE, STDOUT
+
+import requests
 
 from colorama import init as colorama_init
 from colorama import Fore as Color
@@ -42,7 +45,16 @@ def get_movie_name(file: str):
     return output_file
 
 
-def get_series_name(series: str, file: str):
+def get_series_from_tvdb(series: str, token: str) -> list:
+    seriesyear = re.search(r"(\(\d{4}\))", series).groups()[0]
+    queryseries = series.removesuffix(seriesyear).strip()
+    response = requests.get(f"https://api4.thetvdb.com/v4/search?query={urllib.parse.quote(queryseries)}&type=series&year={seriesyear.replace("(", "").replace(")", "")}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+    seriesid = response.json()["data"][0]["id"]
+    response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid.removeprefix("series-")}/extended?meta=episodes", timeout=10, headers={"Authorization": f"Bearer {token}"})
+    return response.json()["data"]["episodes"]
+
+
+def get_series_name(series: str, file: str, seriesobj: list):
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
             match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})*)", file)
@@ -52,26 +64,30 @@ def get_series_name(series: str, file: str):
                 for episode in episodes:
                     if episode != "":
                         ep = ep + "E" + episode.rjust(2, "0")
-                name = series + " - S" + match.groups()[0].rjust(2, "0") + ep + ".mkv"
+                for episode in seriesobj:
+                    if episode["seasonNumber"] == int(match.groups()[0]) and episode["number"] == int(ep.replace("E", "")):
+                        title = episode["name"]
+                name = f"{series} - S{match.groups()[0].rjust(2, "0")}{ep} - {title}.mkv"
                 season = "Season " + match.groups()[0].rjust(2, "0")
             return season, name
     return None, None
 
 
-def recode_series(folder: str):
+def recode_series(folder: str, token: str):
     series = os.path.basename(folder)
+    seriesobj = get_series_from_tvdb(series, token)
     for dire in sorted(os.listdir(folder)):
         for file in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
-            season, name = get_series_name(series, file)
+            season, name = get_series_name(series, file, seriesobj)
             if name is not None:
                 if not os.path.exists(os.path.join(os.path.realpath(folder), season)):
                     os.mkdir(os.path.join(os.path.realpath(folder), season))
                 recode(os.path.join(os.path.realpath(os.path.join(folder, dire)), file), os.path.join(folder, season, name))
 
 
-def recode_all_series(folder: str):
+def recode_all_series(folder: str, token: str):
     for dire in sorted(os.listdir(folder)):
-        recode_series(os.path.join(folder, dire))
+        recode_series(os.path.join(folder, dire), token)
 
 
 def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int):
@@ -268,7 +284,7 @@ def recode(file: str, path: str | None = None):
         ffmpeg_command.extend(["-metadata", f"title={os.path.basename(os.path.splitext(output_file)[0])}"])
         print(f"{Color.RED}Changing {Color.BLUE} title{Style.RESET_ALL} from {Color.CYAN}{ffprobe.format.tags.to_dict()["title"]}{Style.RESET_ALL} to {Color.CYAN}{os.path.basename(os.path.splitext(output_file)[0])}{Style.RESET_ALL}")
         changedefault = True
-    if "title" not in ffprobe.format.tags.to_dict():
+    if "title" not in ffprobe.format.tags.to_dict() or ffprobe.format.tags.title is None:
         ffmpeg_command.extend(["-metadata", f"title={os.path.basename(os.path.splitext(output_file)[0])}"])
         print(f"{Color.RED}Changing {Color.BLUE} title{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{os.path.basename(os.path.splitext(output_file)[0])}{Style.RESET_ALL}")
         changedefault = True
@@ -308,7 +324,17 @@ def recode(file: str, path: str | None = None):
     print(f"{Color.GREEN}Done!{Style.RESET_ALL}")
 
 
+def api_login() -> str:
+    with open(os.path.join(os.path.dirname(__file__), "apikey"), "r", encoding="utf-8") as f:
+        apikey = f.read()
+        f.close()
+    response = requests.post("https://api4.thetvdb.com/v4/login", json={"apikey": apikey}, timeout=10, headers={"Content-Type": "application/json"})
+
+    return response.json()["data"]["token"]
+
+
 def main():
+    token = api_login()
     notdir = 0
     if len(sys.argv) < 2:
         for file in sorted(os.listdir(os.getcwd())):
@@ -320,9 +346,9 @@ def main():
                     if os.path.isfile(os.path.join(folder, file)):
                         notdir += 1
             if notdir == 0:
-                recode_all_series(os.getcwd())
+                recode_all_series(os.getcwd(), token)
             else:
-                recode_series(os.getcwd())
+                recode_series(os.getcwd(), token)
 
         else:
             for file in sorted(os.listdir(os.getcwd())):
@@ -336,7 +362,7 @@ def main():
                 if os.path.isfile(os.path.join(sys.argv[1], file)):
                     notdir += 1
             if notdir == 0:
-                recode_series(sys.argv[1])
+                recode_series(sys.argv[1], token)
             else:
                 for file in sorted(os.listdir(sys.argv[1])):
                     recode(sys.argv[1] + "/" + file)
