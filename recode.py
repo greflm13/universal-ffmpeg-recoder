@@ -68,10 +68,9 @@ def get_series_name(series: str, file: str, seriesobj: list):
                     for epi in seriesobj:
                         if epi["seasonNumber"] == int(match.groups()[0]) and epi["number"] == int(episode):
                             titles.append(epi["name"])
-                for index, title in enumerate(titles):
-                    titles[index] = re.sub(r"\(\d+\)", "", title).strip()
-                if len(titles) == 2 and titles[0] == titles[1]:
-                    title = titles[0]
+                if len(titles) == 2:
+                    if re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
+                        title = re.sub(r"\(\d+\)", "", titles[0]).strip()
                 else:
                     title = " + ".join(titles)
                 if title and title is not None and title != "":
