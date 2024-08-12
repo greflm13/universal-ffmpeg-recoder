@@ -290,6 +290,11 @@ def recode(file: str, path: str | None = None):
                 print(f"Setting    {Color.GREEN}subtitle{Style.RESET_ALL}   stream {Color.BLUE}s:{sdefault['sindex']}{Style.RESET_ALL} to default")
                 changedefault = True
 
+    if ffprobe.format.tags.tags_title is not None:
+        ffprobe.format.tags.title = ffprobe.format.tags.tags_title
+    elif ffprobe.format.tags.purple_title is not None:
+        ffprobe.format.tags.title = ffprobe.format.tags.purple_title
+
     if ffprobe.format.tags.title and ffprobe.format.tags.to_dict()["title"] != os.path.basename(os.path.splitext(output_file)[0]):
         ffmpeg_command.extend(["-metadata", f"title={os.path.basename(os.path.splitext(output_file)[0])}"])
         print(f"{Color.RED}Changing {Color.BLUE} title{Style.RESET_ALL} from {Color.CYAN}{ffprobe.format.tags.to_dict()["title"]}{Style.RESET_ALL} to {Color.CYAN}{os.path.basename(os.path.splitext(output_file)[0])}{Style.RESET_ALL}")
