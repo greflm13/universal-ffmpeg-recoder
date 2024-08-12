@@ -69,7 +69,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
                         title = episode["name"]
                 name = f"{series} - S{match.groups()[0].rjust(2, "0")}{ep} - {title}.mkv"
                 season = "Season " + match.groups()[0].rjust(2, "0")
-            return season, name
+                return season, name
     return None, None
 
 
