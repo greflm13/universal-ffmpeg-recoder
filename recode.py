@@ -369,11 +369,12 @@ def main():
         elif sys.argv[1] == "rename":
             folder = os.getcwd()
             series = os.path.basename(folder)
+            seriesobj = get_series_from_tvdb(series, token)
             for dire in sorted(os.listdir(folder)):
                 if not os.path.isfile(os.path.join(folder, dire)):
                     for file in sorted(os.listdir(os.path.realpath(dire))):
                         try:
-                            season, name = get_series_name(series, file)
+                            season, name = get_series_name(series, file, seriesobj)
                         except RuntimeError:
                             continue
                         if season is not None:
