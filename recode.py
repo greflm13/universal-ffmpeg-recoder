@@ -60,14 +60,24 @@ def get_series_name(series: str, file: str, seriesobj: list):
             match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})*)", file)
             if match:
                 episodes = match.groups()[1].replace("e", "E").split("E")
+                episodes.remove("")
                 ep = ""
+                titles: list[str] = []
                 for episode in episodes:
-                    if episode != "":
-                        ep = ep + "E" + episode.rjust(2, "0")
-                for episode in seriesobj:
-                    if episode["seasonNumber"] == int(match.groups()[0]) and episode["number"] == int(ep.replace("E", "")):
-                        title = episode["name"]
-                name = f"{series} - S{match.groups()[0].rjust(2, "0")}{ep} - {title}.mkv"
+                    ep = ep + "E" + episode.rjust(2, "0")
+                    for epi in seriesobj:
+                        if epi["seasonNumber"] == int(match.groups()[0]) and epi["number"] == int(episode):
+                            titles.append(epi["name"])
+                for title in titles:
+                    title = re.sub(r"\(\d+\)", "", title)
+                if len(titles) == 2 and titles[0] == titles[1]:
+                    title = titles[0]
+                else:
+                    title = " + ".join(titles)
+                if title and title is not None and title != "":
+                    name = f"{series} - S{match.groups()[0].rjust(2, "0")}{ep} - {title}.mkv"
+                else:
+                    name = f"{series} - S{match.groups()[0].rjust(2, "0")}{ep}.mkv"
                 season = "Season " + match.groups()[0].rjust(2, "0")
                 return season, name
     return None, None
