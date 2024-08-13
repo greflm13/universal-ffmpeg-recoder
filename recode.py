@@ -42,7 +42,7 @@ def rename_keys_to_lower(iterable):
             item = rename_keys_to_lower(item)
     return iterable
 
-def get_movie_name(file: str):
+def get_movie_name(file: str, token: str):
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
             match = re.search(pattern=r"\d{4}", string=file)
@@ -50,9 +50,13 @@ def get_movie_name(file: str):
                 year: str = match.group()
                 movie_name: str = file[: match.start()].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
                 output_file = f"{movie_name}({year}).mkv"
+                response = requests.get(f"https://api4.thetvdb.com/v4/series?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+                ret = response.json()["data"][0]
+                metadata = {"comment": ret["overviews"]["eng"], "title": ret["extended_title"], "date": ret["first_air_time"]}
             else:
                 output_file: str = os.path.splitext(file)[0] + ".mkv"
-    return output_file
+                metadata = {"title": os.path.splitext(file)[0]}
+    return output_file, metadata
 
 
 def get_series_from_tvdb(series: str, token: str) -> list:
@@ -85,6 +89,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
                         if epi["seasonNumber"] == int(match.groups()[0]) and epi["number"] == int(episode):
                             titles.append(epi["name"])
                             comments.append(epi["overview"])
+                            date = epi["aired"]
                 if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
                     title = re.sub(r"\(\d+\)", "", titles[0]).strip()
                 else:
@@ -98,7 +103,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
                     comment = " ".join(comments)
                 except TypeError:
                     comment = None
-                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": comment, "title" : name.removesuffix(".mkv")}
+                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": comment, "title" : name.removesuffix(".mkv"), "date": date}
                 return season, name, metadata
     return None, None, None
 
@@ -211,7 +216,7 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int):
         sdefault.update({"lang": stream.tags.language, "oindex": stream.index, "sindex": sindex, "type": subtitle_type})
 
 
-def recode(file: str, path: str | None = None, metadata: dict = {}):
+def recode(file: str, path: str | None = None, metadata: dict = {}, token: str | None = None):
 
     printlines = []
 
@@ -240,7 +245,7 @@ def recode(file: str, path: str | None = None, metadata: dict = {}):
     ffmpeg_command.extend(["ffmpeg", "-v", "quiet", "-stats", "-hwaccel", "auto", "-i", os.path.realpath(file)])
 
     if path is None:
-        output_file = get_movie_name(file)
+        output_file, metadata = get_movie_name(file, token)
     else:
         output_file = path
 
@@ -394,7 +399,7 @@ def main():
         else:
             for file in sorted(os.listdir(os.getcwd())):
                 try:
-                    recode(file)
+                    recode(file, token)
                 except RuntimeError:
                     continue
     else:
@@ -406,7 +411,7 @@ def main():
                 recode_series(sys.argv[1], token)
             else:
                 for file in sorted(os.listdir(sys.argv[1])):
-                    recode(sys.argv[1] + "/" + file)
+                    recode(sys.argv[1] + "/" + file, token)
         elif sys.argv[1] == "rename":
             folder = os.getcwd()
             series = os.path.basename(folder)
@@ -428,7 +433,7 @@ def main():
                                 shutil.move(old, new)
         for container in VIDEO_CONTAINERS:
             if sys.argv[1].endswith(container):
-                recode(sys.argv[1])
+                recode(sys.argv[1], token)
 
 
 if __name__ == "__main__":
