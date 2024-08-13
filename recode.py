@@ -94,7 +94,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
                 else:
                     name = f"{series} - S{seasonnum.rjust(2, "0")}{ep}.mkv"
                 season = f"Season {seasonnum.rjust(2, "0")}"
-                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": ". ".join(comments)}
+                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": " ".join(comments)}
                 return season, name, metadata
     return None, None, None
 
