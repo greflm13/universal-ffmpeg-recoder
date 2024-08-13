@@ -98,7 +98,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
                     comment = " ".join(comments)
                 except TypeError:
                     comment = None
-                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": comment}
+                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": comment, "title" : name.removesuffix(".mkv")}
                 return season, name, metadata
     return None, None, None
 
