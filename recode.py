@@ -31,15 +31,15 @@ VIDEO_CONTAINERS = [
 AUDIO_PRIORITY = {"dts": 4, "truehd": 3, "eac3": 2, "ac3": 1}
 SUBTITLE_PRIORITY = {"full": 3, "sdh": 2, "none": 1}
 
-def renameKeysToLower(iterable):
-    if type(iterable) is dict:
+def rename_keys_to_lower(iterable):
+    if isinstance(iterable, dict):
         for key in list(iterable.keys()):
             iterable[key.lower()] = iterable.pop(key)
-            if type(iterable[key.lower()]) is dict or type(iterable[key.lower()]) is list:
-                iterable[key.lower()] = renameKeysToLower(iterable[key.lower()])
-    elif type(iterable) is list:
+            if isinstance(iterable[key.lower()], dict) or isinstance(iterable[key.lower()], list):
+                iterable[key.lower()] = rename_keys_to_lower(iterable[key.lower()])
+    elif isinstance(iterable, list):
         for item in iterable:
-            item = renameKeysToLower(item)
+            item = rename_keys_to_lower(item)
     return iterable
 
 def get_movie_name(file: str):
@@ -78,7 +78,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
                 episodes.remove("")
                 ep = ""
                 titles: list[str] = []
-                comments: list[str] = []
+                comments: list[str] = [""]
                 for episode in episodes:
                     ep = ep + "E" + episode.rjust(2, "0")
                     for epi in seriesobj:
@@ -94,7 +94,11 @@ def get_series_name(series: str, file: str, seriesobj: list):
                 else:
                     name = f"{series} - S{seasonnum.rjust(2, "0")}{ep}.mkv"
                 season = f"Season {seasonnum.rjust(2, "0")}"
-                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": " ".join(comments)}
+                try:
+                    comment = " ".join(comments)
+                except TypeError:
+                    comment = None
+                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": comment}
                 return season, name, metadata
     return None, None, None
 
@@ -207,7 +211,7 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int):
         sdefault.update({"lang": stream.tags.language, "oindex": stream.index, "sindex": sindex, "type": subtitle_type})
 
 
-def recode(file: str, path: str | None = None, metadata: dict = {},):
+def recode(file: str, path: str | None = None, metadata: dict = {}):
 
     printlines = []
 
@@ -252,7 +256,7 @@ def recode(file: str, path: str | None = None, metadata: dict = {},):
     )
     out, err = p.communicate()
     try:
-        ffprobe = Ffprobe.from_dict(renameKeysToLower(json.loads(out.decode("utf-8"))))
+        ffprobe = Ffprobe.from_dict(rename_keys_to_lower(json.loads(out.decode("utf-8"))))
     except Exception as err:
         print(f"Error: {err}")
         raise RuntimeError from err
@@ -313,14 +317,15 @@ def recode(file: str, path: str | None = None, metadata: dict = {},):
 
     format_tags = ffprobe.format.tags.to_dict()
     for tag in metadata.keys():
-        if tag in format_tags and metadata[tag].strip() == format_tags[tag]:
-            continue
-        elif tag not in format_tags:
-            printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
-        else:
-            printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}{format_tags[tag]}{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
-        ffmpeg_metadata.extend(["-metadata", f"{tag}={metadata[tag].strip()}"])
-        changemetadata = True
+        if metadata[tag] != "" and metadata[tag] is not None:
+            if tag in format_tags and metadata[tag].strip() == format_tags[tag]:
+                continue
+            if tag not in format_tags:
+                printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
+            else:
+                printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}{format_tags[tag]}{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
+            ffmpeg_metadata.extend(["-metadata", f"{tag}={metadata[tag].strip()}"])
+            changemetadata = True
 
     ffmpeg_command.extend(ffmpeg_mapping)
     ffmpeg_command.extend(ffmpeg_recoding)
