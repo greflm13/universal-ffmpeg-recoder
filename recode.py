@@ -349,7 +349,7 @@ def recode(file: str, path: str | None = None, metadata: dict = {},):
         process.wait()
     timestop = datetime.datetime.now()
     print(f"Recoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
-    print(f"{Color.RED}Recoding took {Style.RESET_ALL}{timestop - timestart}{Style.RESET_ALL}")
+    print(f"Recoding took {Color.GREEN}{timestop - timestart}{Style.RESET_ALL}")
 
     # Rename old file
     shutil.move(os.path.realpath(file), os.path.realpath(file) + ".old")
