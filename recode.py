@@ -123,11 +123,11 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:v:{vindex}", "libx265"])
         vrecoding = True
-        printlines.append(f"Converting {Color.GREEN}video{Style.RESET_ALL}      stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}hevc{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file")
+        printlines.append(f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}hevc{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file")
     elif stream.disposition.attached_pic == 0:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
-        printlines.append(f"Copying    {Color.GREEN}video{Style.RESET_ALL}      stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file")
+        printlines.append(f"Copying {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file")
     vindex += 1
     return vrecoding, vindex
 
@@ -136,13 +136,13 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
     if stream.codec_name in ["ac3", "eac3", "truehd", "dts"]:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
-        printlines.append(f"Copying    {Color.GREEN}audio{Style.RESET_ALL}      stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file")
+        printlines.append(f"Copying {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file")
     else:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:a:{aindex}", "ac3"])
         arecoding = True
         stream.codec_name = "ac3"
-        printlines.append(f"Converting {Color.GREEN}audio{Style.RESET_ALL}      stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}ac3{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file")
+        printlines.append(f"Converting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}ac3{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file")
     obj = stream.to_dict()
     obj["newindex"] = aindex
     astreams.append(obj)
@@ -181,11 +181,11 @@ def subtitles(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, sinde
         if stream.codec_name in ["subrip", "hdmv_pgs_subtitle", "ass", "dvd_subtitle"]:
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:s:{sindex}", "copy"])
-            printlines.append(f"Copying    {Color.GREEN}subtitle{Style.RESET_ALL}   stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file")
+            printlines.append(f"Copying {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file")
         else:
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:s:{sindex}", "srt"])
-            printlines.append(f"Converting {Color.GREEN}subtitle{Style.RESET_ALL}   stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}srt{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file")
+            printlines.append(f"Converting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}srt{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file")
             stream.codec_name = "srt"
         obj = stream.to_dict()
         obj["newindex"] = sindex
@@ -291,7 +291,7 @@ def recode(file: str, path: str | None = None, metadata: dict = {},):
     for stream in ffprobe.streams:
         if stream.codec_type == "attachment":
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-            printlines.append(f"Copying    {Color.GREEN}attachment{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.filename}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}t:{tindex}{Style.RESET_ALL} in output file")
+            printlines.append(f"Copying {Color.GREEN}attachment{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.filename}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}t:{tindex}{Style.RESET_ALL} in output file")
             tindex += 1
 
     if aindex > 0 and adefault["aindex"] is not None:
@@ -300,7 +300,7 @@ def recode(file: str, path: str | None = None, metadata: dict = {},):
                 ffmpeg_dispositions.extend([f"-disposition:a:{stream['newindex']}", "none"])
             elif stream["disposition"]["default"] == 0:
                 ffmpeg_dispositions.extend([f"-disposition:a:{adefault['aindex']}", "default"])
-                printlines.append(f"Setting    {Color.GREEN}audio{Style.RESET_ALL}      stream {Color.BLUE}a:{adefault['aindex']}{Style.RESET_ALL} to default")
+                printlines.append(f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}a:{adefault['aindex']}{Style.RESET_ALL} to default")
                 changedefault = True
     if sindex > 0 and sdefault["sindex"] is not None:
         for stream in sstreams:
@@ -308,7 +308,7 @@ def recode(file: str, path: str | None = None, metadata: dict = {},):
                 ffmpeg_dispositions.extend([f"-disposition:s:{stream['newindex']}", "none"])
             elif stream["disposition"]["default"] == 0:
                 ffmpeg_dispositions.extend([f"-disposition:s:{sdefault['sindex']}", "default"])
-                printlines.append(f"Setting    {Color.GREEN}subtitle{Style.RESET_ALL}   stream {Color.BLUE}s:{sdefault['sindex']}{Style.RESET_ALL} to default")
+                printlines.append(f"Setting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}s:{sdefault['sindex']}{Style.RESET_ALL} to default")
                 changedefault = True
 
     format_tags = ffprobe.format.tags.to_dict()
