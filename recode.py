@@ -319,7 +319,7 @@ def recode(file: str, path: str | None = None, metadata: dict = {},):
             printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{metadata[tag]}{Style.RESET_ALL}")
         else:
             printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}{format_tags[tag]}{Style.RESET_ALL} to {Color.CYAN}{metadata[tag]}{Style.RESET_ALL}")
-        ffmpeg_metadata.extend(["-metadata", f"{tag}={metadata[tag]}"])
+        ffmpeg_metadata.extend(["-metadata", f"{tag}={metadata[tag].strip()}"])
         changemetadata = True
 
     ffmpeg_command.extend(ffmpeg_mapping)
