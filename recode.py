@@ -316,9 +316,9 @@ def recode(file: str, path: str | None = None, metadata: dict = {},):
         if tag in format_tags and metadata[tag] == format_tags[tag]:
             continue
         elif tag not in format_tags:
-            printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{metadata[tag]}{Style.RESET_ALL}")
+            printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
         else:
-            printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}{format_tags[tag]}{Style.RESET_ALL} to {Color.CYAN}{metadata[tag]}{Style.RESET_ALL}")
+            printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}{format_tags[tag]}{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
         ffmpeg_metadata.extend(["-metadata", f"{tag}={metadata[tag].strip()}"])
         changemetadata = True
 
