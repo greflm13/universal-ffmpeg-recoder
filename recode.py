@@ -313,7 +313,7 @@ def recode(file: str, path: str | None = None, metadata: dict = {},):
 
     format_tags = ffprobe.format.tags.to_dict()
     for tag in metadata.keys():
-        if tag in format_tags and metadata[tag] == format_tags[tag]:
+        if tag in format_tags and metadata[tag].strip() == format_tags[tag]:
             continue
         elif tag not in format_tags:
             printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
