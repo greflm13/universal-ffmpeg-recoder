@@ -83,6 +83,17 @@ def generate_filelist(searchpath):
         filelist = out.decode("utf-8").split("\n")
     return filelist
 
+def renameKeysToLower(iterable):
+    if type(iterable) is dict:
+        for key in list(iterable.keys()):
+            iterable[key.lower()] = iterable.pop(key)
+            if type(iterable[key.lower()]) is dict or type(iterable[key.lower()]) is list:
+                iterable[key.lower()] = renameKeysToLower(iterable[key.lower()])
+    elif type(iterable) is list:
+        for item in iterable:
+            item = renameKeysToLower(item)
+    return iterable
+
 
 def existing_json(json_path):
     builder = CustomSchemaBuilder()
@@ -90,7 +101,7 @@ def existing_json(json_path):
     with open(json_path, "r", encoding="utf-8") as json_file:
         data = json.loads(json_file.read())
         for obj in data:
-            builder.add_object(obj)
+            builder.add_object(renameKeysToLower(obj))
     print("Writing JSON schema...")
     with open("schema.json", "w", encoding="utf-8") as f:
         f.write(builder.to_json(indent=2))

@@ -51,65 +51,49 @@ class FormatTags:
     abj: Optional[str] = None
     actor: Optional[str] = None
     artist: Optional[str] = None
-    tags_artist: Optional[str] = None
     audiodelay: Optional[str] = None
     bitrate: Optional[str] = None
-    can_seek_to_end: Optional[str] = None
+    canseektoend: Optional[str] = None
     com_android_capture_fps: Optional[str] = None
     com_android_version: Optional[str] = None
-    tags_com_apple_quicktime_author: Optional[str] = None
     com_apple_quicktime_author: Optional[str] = None
-    tags_com_apple_quicktime_description: Optional[str] = None
     com_apple_quicktime_description: Optional[str] = None
-    tags_com_apple_quicktime_displayname: Optional[str] = None
     com_apple_quicktime_displayname: Optional[str] = None
-    tags_com_apple_quicktime_keywords: Optional[str] = None
     com_apple_quicktime_keywords: Optional[str] = None
-    tags_com_apple_quicktime_title: Optional[str] = None
     com_apple_quicktime_title: Optional[str] = None
-    tags_comment: Optional[str] = None
     comment: Optional[str] = None
     compatible_brands: Optional[str] = None
-    tags_compatible_brands: Optional[str] = None
     composer: Optional[str] = None
     contact: Optional[str] = None
     content_type: Optional[str] = None
     copyright: Optional[str] = None
-    tags_creation_time: Optional[str] = None
     creation_time: Optional[str] = None
     creationdate: Optional[str] = None
     date: Optional[str] = None
-    tags_date: Optional[str] = None
     date_recorded: Optional[str] = None
     date_release: Optional[str] = None
     date_released: Optional[str] = None
     description: Optional[str] = None
-    tags_description: Optional[str] = None
     director: Optional[str] = None
     encoded_by: Optional[str] = None
     encoder: Optional[str] = None
-    purple_encoder: Optional[str] = None
-    tags_encoder: Optional[str] = None
     encoder_eng: Optional[str] = None
     episode_id: Optional[str] = None
     episode_sort: Optional[str] = None
     file: Optional[str] = None
     filters: Optional[str] = None
     genre: Optional[str] = None
-    tags_genre: Optional[str] = None
     hd_video: Optional[str] = None
     hw: Optional[str] = None
     imdb: Optional[str] = None
     imdb_eng: Optional[str] = None
-    i_tun_movi: Optional[str] = None
+    itunmovi: Optional[str] = None
     keywords: Optional[str] = None
     location: Optional[str] = None
     major_brand: Optional[str] = None
-    tags_major_brand: Optional[str] = None
     maxrate: Optional[str] = None
     media_type: Optional[str] = None
     minor_version: Optional[str] = None
-    tags_minor_version: Optional[str] = None
     modification_time: Optional[datetime] = None
     movie_comment: Optional[str] = None
     movie_encoder: Optional[str] = None
@@ -120,21 +104,14 @@ class FormatTags:
     released_by: Optional[str] = None
     scene: Optional[str] = None
     screenplay_by: Optional[str] = None
-    tags_season_number: Optional[str] = None
     season_number: Optional[str] = None
     show: Optional[str] = None
     software: Optional[str] = None
-    summary: Optional[str] = None
     synopsis: Optional[str] = None
-    tags_synopsis: Optional[str] = None
     te_is_reencode: Optional[str] = None
     timecode: Optional[str] = None
-    purple_title: Optional[str] = None
-    tags_title: Optional[str] = None
     title: Optional[str] = None
     tmdb: Optional[str] = None
-    total_parts: Optional[str] = None
-    track: Optional[str] = None
     tvdb: Optional[str] = None
     tvdb2: Optional[str] = None
     version: Optional[str] = None
@@ -143,299 +120,232 @@ class FormatTags:
     written_by: Optional[str] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> "FormatTags":
+    def from_dict(obj: Any) -> 'FormatTags':
         assert isinstance(obj, dict)
         empty = from_union([from_str, from_none], obj.get(""))
-        abj = from_union([from_str, from_none], obj.get("ABJ"))
-        actor = from_union([from_str, from_none], obj.get("ACTOR"))
-        artist = from_union([from_str, from_none], obj.get("ARTIST"))
-        tags_artist = from_union([from_str, from_none], obj.get("artist"))
+        abj = from_union([from_str, from_none], obj.get("abj"))
+        actor = from_union([from_str, from_none], obj.get("actor"))
+        artist = from_union([from_str, from_none], obj.get("artist"))
         audiodelay = from_union([from_str, from_none], obj.get("audiodelay"))
         bitrate = from_union([from_str, from_none], obj.get("bitrate"))
-        can_seek_to_end = from_union([from_str, from_none], obj.get("canSeekToEnd"))
+        canseektoend = from_union([from_str, from_none], obj.get("canseektoend"))
         com_android_capture_fps = from_union([from_str, from_none], obj.get("com.android.capture.fps"))
         com_android_version = from_union([from_str, from_none], obj.get("com.android.version"))
-        tags_com_apple_quicktime_author = from_union([from_str, from_none], obj.get("com.apple.quicktime.author"))
-        com_apple_quicktime_author = from_union([from_str, from_none], obj.get("COM.APPLE.QUICKTIME.AUTHOR"))
-        tags_com_apple_quicktime_description = from_union([from_str, from_none], obj.get("com.apple.quicktime.description"))
-        com_apple_quicktime_description = from_union([from_str, from_none], obj.get("COM.APPLE.QUICKTIME.DESCRIPTION"))
-        tags_com_apple_quicktime_displayname = from_union([from_str, from_none], obj.get("com.apple.quicktime.displayname"))
-        com_apple_quicktime_displayname = from_union([from_str, from_none], obj.get("COM.APPLE.QUICKTIME.DISPLAYNAME"))
-        tags_com_apple_quicktime_keywords = from_union([from_str, from_none], obj.get("com.apple.quicktime.keywords"))
-        com_apple_quicktime_keywords = from_union([from_str, from_none], obj.get("COM.APPLE.QUICKTIME.KEYWORDS"))
-        tags_com_apple_quicktime_title = from_union([from_str, from_none], obj.get("com.apple.quicktime.title"))
-        com_apple_quicktime_title = from_union([from_str, from_none], obj.get("COM.APPLE.QUICKTIME.TITLE"))
-        tags_comment = from_union([from_str, from_none], obj.get("comment"))
-        comment = from_union([from_str, from_none], obj.get("COMMENT"))
-        compatible_brands = from_union([from_str, from_none], obj.get("COMPATIBLE_BRANDS"))
-        tags_compatible_brands = from_union([from_str, from_none], obj.get("compatible_brands"))
+        com_apple_quicktime_author = from_union([from_str, from_none], obj.get("com.apple.quicktime.author"))
+        com_apple_quicktime_description = from_union([from_str, from_none], obj.get("com.apple.quicktime.description"))
+        com_apple_quicktime_displayname = from_union([from_str, from_none], obj.get("com.apple.quicktime.displayname"))
+        com_apple_quicktime_keywords = from_union([from_str, from_none], obj.get("com.apple.quicktime.keywords"))
+        com_apple_quicktime_title = from_union([from_str, from_none], obj.get("com.apple.quicktime.title"))
+        comment = from_union([from_str, from_none], obj.get("comment"))
+        compatible_brands = from_union([from_str, from_none], obj.get("compatible_brands"))
         composer = from_union([from_str, from_none], obj.get("composer"))
         contact = from_union([from_str, from_none], obj.get("contact"))
-        content_type = from_union([from_str, from_none], obj.get("CONTENT_TYPE"))
-        copyright = from_union([from_str, from_none], obj.get("COPYRIGHT"))
-        tags_creation_time = from_union([from_str, from_none], obj.get("creation_time"))
-        creation_time = from_union([from_str, from_none], obj.get("CREATION_TIME"))
+        content_type = from_union([from_str, from_none], obj.get("content_type"))
+        copyright = from_union([from_str, from_none], obj.get("copyright"))
+        creation_time = from_union([from_str, from_none], obj.get("creation_time"))
         creationdate = from_union([from_str, from_none], obj.get("creationdate"))
-        date = from_union([from_str, from_none], obj.get("DATE"))
-        tags_date = from_union([from_str, from_none], obj.get("date"))
-        date_recorded = from_union([from_str, from_none], obj.get("DATE_RECORDED"))
-        date_release = from_union([from_str, from_none], obj.get("DATE_RELEASE"))
-        date_released = from_union([from_str, from_none], obj.get("DATE_RELEASED"))
-        description = from_union([from_str, from_none], obj.get("DESCRIPTION"))
-        tags_description = from_union([from_str, from_none], obj.get("description"))
-        director = from_union([from_str, from_none], obj.get("DIRECTOR"))
-        encoded_by = from_union([from_str, from_none], obj.get("ENCODED_BY"))
-        encoder = from_union([from_str, from_none], obj.get("ENCODER"))
-        purple_encoder = from_union([from_str, from_none], obj.get("encoder"))
-        tags_encoder = from_union([from_str, from_none], obj.get("Encoder"))
+        date = from_union([from_str, from_none], obj.get("date"))
+        date_recorded = from_union([from_str, from_none], obj.get("date_recorded"))
+        date_release = from_union([from_str, from_none], obj.get("date_release"))
+        date_released = from_union([from_str, from_none], obj.get("date_released"))
+        description = from_union([from_str, from_none], obj.get("description"))
+        director = from_union([from_str, from_none], obj.get("director"))
+        encoded_by = from_union([from_str, from_none], obj.get("encoded_by"))
+        encoder = from_union([from_str, from_none], obj.get("encoder"))
         encoder_eng = from_union([from_str, from_none], obj.get("encoder-eng"))
-        episode_id = from_union([from_str, from_none], obj.get("EPISODE_ID"))
+        episode_id = from_union([from_str, from_none], obj.get("episode_id"))
         episode_sort = from_union([from_str, from_none], obj.get("episode_sort"))
-        file = from_union([from_str, from_none], obj.get("FILE"))
-        filters = from_union([from_str, from_none], obj.get("Filters"))
-        genre = from_union([from_str, from_none], obj.get("GENRE"))
-        tags_genre = from_union([from_str, from_none], obj.get("genre"))
+        file = from_union([from_str, from_none], obj.get("file"))
+        filters = from_union([from_str, from_none], obj.get("filters"))
+        genre = from_union([from_str, from_none], obj.get("genre"))
         hd_video = from_union([from_str, from_none], obj.get("hd_video"))
-        hw = from_union([from_str, from_none], obj.get("Hw"))
-        imdb = from_union([from_str, from_none], obj.get("IMDB"))
-        imdb_eng = from_union([from_str, from_none], obj.get("IMDB-eng"))
-        i_tun_movi = from_union([from_str, from_none], obj.get("iTunMOVI"))
-        keywords = from_union([from_str, from_none], obj.get("KEYWORDS"))
+        hw = from_union([from_str, from_none], obj.get("hw"))
+        imdb = from_union([from_str, from_none], obj.get("imdb"))
+        imdb_eng = from_union([from_str, from_none], obj.get("imdb-eng"))
+        itunmovi = from_union([from_str, from_none], obj.get("itunmovi"))
+        keywords = from_union([from_str, from_none], obj.get("keywords"))
         location = from_union([from_str, from_none], obj.get("location"))
-        major_brand = from_union([from_str, from_none], obj.get("MAJOR_BRAND"))
-        tags_major_brand = from_union([from_str, from_none], obj.get("major_brand"))
+        major_brand = from_union([from_str, from_none], obj.get("major_brand"))
         maxrate = from_union([from_str, from_none], obj.get("maxrate"))
         media_type = from_union([from_str, from_none], obj.get("media_type"))
-        minor_version = from_union([from_str, from_none], obj.get("MINOR_VERSION"))
-        tags_minor_version = from_union([from_str, from_none], obj.get("minor_version"))
+        minor_version = from_union([from_str, from_none], obj.get("minor_version"))
         modification_time = from_union([from_datetime, from_none], obj.get("modification_time"))
-        movie_comment = from_union([from_str, from_none], obj.get("MOVIE/COMMENT"))
-        movie_encoder = from_union([from_str, from_none], obj.get("MOVIE/ENCODER"))
-        producer = from_union([from_str, from_none], obj.get("PRODUCER"))
-        production_studio = from_union([from_str, from_none], obj.get("PRODUCTION_STUDIO"))
-        publisher = from_union([from_str, from_none], obj.get("PUBLISHER"))
-        purl = from_union([from_str, from_none], obj.get("PURL"))
+        movie_comment = from_union([from_str, from_none], obj.get("movie/comment"))
+        movie_encoder = from_union([from_str, from_none], obj.get("movie/encoder"))
+        producer = from_union([from_str, from_none], obj.get("producer"))
+        production_studio = from_union([from_str, from_none], obj.get("production_studio"))
+        publisher = from_union([from_str, from_none], obj.get("publisher"))
+        purl = from_union([from_str, from_none], obj.get("purl"))
         released_by = from_union([from_str, from_none], obj.get("released by"))
-        scene = from_union([from_str, from_none], obj.get("SCENE"))
-        screenplay_by = from_union([from_str, from_none], obj.get("SCREENPLAY_BY"))
-        tags_season_number = from_union([from_str, from_none], obj.get("season_number"))
-        season_number = from_union([from_str, from_none], obj.get("SEASON_NUMBER"))
-        show = from_union([from_str, from_none], obj.get("SHOW"))
+        scene = from_union([from_str, from_none], obj.get("scene"))
+        screenplay_by = from_union([from_str, from_none], obj.get("screenplay_by"))
+        season_number = from_union([from_str, from_none], obj.get("season_number"))
+        show = from_union([from_str, from_none], obj.get("show"))
         software = from_union([from_str, from_none], obj.get("software"))
-        summary = from_union([from_str, from_none], obj.get("SUMMARY"))
-        synopsis = from_union([from_str, from_none], obj.get("SYNOPSIS"))
-        tags_synopsis = from_union([from_str, from_none], obj.get("synopsis"))
+        synopsis = from_union([from_str, from_none], obj.get("synopsis"))
         te_is_reencode = from_union([from_str, from_none], obj.get("te_is_reencode"))
-        timecode = from_union([from_str, from_none], obj.get("TIMECODE"))
-        purple_title = from_union([from_str, from_none], obj.get("title"))
-        tags_title = from_union([from_str, from_none], obj.get("Title"))
-        title = from_union([from_str, from_none], obj.get("TITLE"))
-        tmdb = from_union([from_str, from_none], obj.get("TMDB"))
-        total_parts = from_union([from_str, from_none], obj.get("TOTAL_PARTS"))
-        track = from_union([from_str, from_none], obj.get("track"))
-        tvdb = from_union([from_str, from_none], obj.get("TVDB"))
-        tvdb2 = from_union([from_str, from_none], obj.get("TVDB2"))
-        version = from_union([from_str, from_none], obj.get("Version"))
-        version_eng = from_union([from_str, from_none], obj.get("Version-eng"))
-        writing_frontend = from_union([from_str, from_none], obj.get("Writing frontend"))
-        written_by = from_union([from_str, from_none], obj.get("WRITTEN_BY"))
-        return FormatTags(empty, abj, actor, artist, tags_artist, audiodelay, bitrate, can_seek_to_end, com_android_capture_fps, com_android_version, tags_com_apple_quicktime_author, com_apple_quicktime_author, tags_com_apple_quicktime_description, com_apple_quicktime_description, tags_com_apple_quicktime_displayname, com_apple_quicktime_displayname, tags_com_apple_quicktime_keywords, com_apple_quicktime_keywords, tags_com_apple_quicktime_title, com_apple_quicktime_title, tags_comment, comment, compatible_brands, tags_compatible_brands, composer, contact, content_type, copyright, tags_creation_time, creation_time, creationdate, date, tags_date, date_recorded, date_release, date_released, description, tags_description, director, encoded_by, encoder, purple_encoder, tags_encoder, encoder_eng, episode_id, episode_sort, file, filters, genre, tags_genre, hd_video, hw, imdb, imdb_eng, i_tun_movi, keywords, location, major_brand, tags_major_brand, maxrate, media_type, minor_version, tags_minor_version, modification_time, movie_comment, movie_encoder, producer, production_studio, publisher, purl, released_by, scene, screenplay_by, tags_season_number, season_number, show, software, summary, synopsis, tags_synopsis, te_is_reencode, timecode, purple_title, tags_title, title, tmdb, total_parts, track, tvdb, tvdb2, version, version_eng, writing_frontend, written_by)
+        timecode = from_union([from_str, from_none], obj.get("timecode"))
+        title = from_union([from_str, from_none], obj.get("title"))
+        tmdb = from_union([from_str, from_none], obj.get("tmdb"))
+        tvdb = from_union([from_str, from_none], obj.get("tvdb"))
+        tvdb2 = from_union([from_str, from_none], obj.get("tvdb2"))
+        version = from_union([from_str, from_none], obj.get("version"))
+        version_eng = from_union([from_str, from_none], obj.get("version-eng"))
+        writing_frontend = from_union([from_str, from_none], obj.get("writing frontend"))
+        written_by = from_union([from_str, from_none], obj.get("written_by"))
+        return FormatTags(empty, abj, actor, artist, audiodelay, bitrate, canseektoend, com_android_capture_fps, com_android_version, com_apple_quicktime_author, com_apple_quicktime_description, com_apple_quicktime_displayname, com_apple_quicktime_keywords, com_apple_quicktime_title, comment, compatible_brands, composer, contact, content_type, copyright, creation_time, creationdate, date, date_recorded, date_release, date_released, description, director, encoded_by, encoder, encoder_eng, episode_id, episode_sort, file, filters, genre, hd_video, hw, imdb, imdb_eng, itunmovi, keywords, location, major_brand, maxrate, media_type, minor_version, modification_time, movie_comment, movie_encoder, producer, production_studio, publisher, purl, released_by, scene, screenplay_by, season_number, show, software, synopsis, te_is_reencode, timecode, title, tmdb, tvdb, tvdb2, version, version_eng, writing_frontend, written_by)
 
     def to_dict(self) -> dict:
         result: dict = {}
         if self.empty is not None:
             result[""] = from_union([from_str, from_none], self.empty)
         if self.abj is not None:
-            result["ABJ"] = from_union([from_str, from_none], self.abj)
+            result["abj"] = from_union([from_str, from_none], self.abj)
         if self.actor is not None:
-            result["ACTOR"] = from_union([from_str, from_none], self.actor)
+            result["actor"] = from_union([from_str, from_none], self.actor)
         if self.artist is not None:
-            result["ARTIST"] = from_union([from_str, from_none], self.artist)
-        if self.tags_artist is not None:
-            result["artist"] = from_union([from_str, from_none], self.tags_artist)
+            result["artist"] = from_union([from_str, from_none], self.artist)
         if self.audiodelay is not None:
             result["audiodelay"] = from_union([from_str, from_none], self.audiodelay)
         if self.bitrate is not None:
             result["bitrate"] = from_union([from_str, from_none], self.bitrate)
-        if self.can_seek_to_end is not None:
-            result["canSeekToEnd"] = from_union([from_str, from_none], self.can_seek_to_end)
+        if self.canseektoend is not None:
+            result["canseektoend"] = from_union([from_str, from_none], self.canseektoend)
         if self.com_android_capture_fps is not None:
             result["com.android.capture.fps"] = from_union([from_str, from_none], self.com_android_capture_fps)
         if self.com_android_version is not None:
             result["com.android.version"] = from_union([from_str, from_none], self.com_android_version)
-        if self.tags_com_apple_quicktime_author is not None:
-            result["com.apple.quicktime.author"] = from_union([from_str, from_none], self.tags_com_apple_quicktime_author)
         if self.com_apple_quicktime_author is not None:
-            result["COM.APPLE.QUICKTIME.AUTHOR"] = from_union([from_str, from_none], self.com_apple_quicktime_author)
-        if self.tags_com_apple_quicktime_description is not None:
-            result["com.apple.quicktime.description"] = from_union([from_str, from_none], self.tags_com_apple_quicktime_description)
+            result["com.apple.quicktime.author"] = from_union([from_str, from_none], self.com_apple_quicktime_author)
         if self.com_apple_quicktime_description is not None:
-            result["COM.APPLE.QUICKTIME.DESCRIPTION"] = from_union([from_str, from_none], self.com_apple_quicktime_description)
-        if self.tags_com_apple_quicktime_displayname is not None:
-            result["com.apple.quicktime.displayname"] = from_union([from_str, from_none], self.tags_com_apple_quicktime_displayname)
+            result["com.apple.quicktime.description"] = from_union([from_str, from_none], self.com_apple_quicktime_description)
         if self.com_apple_quicktime_displayname is not None:
-            result["COM.APPLE.QUICKTIME.DISPLAYNAME"] = from_union([from_str, from_none], self.com_apple_quicktime_displayname)
-        if self.tags_com_apple_quicktime_keywords is not None:
-            result["com.apple.quicktime.keywords"] = from_union([from_str, from_none], self.tags_com_apple_quicktime_keywords)
+            result["com.apple.quicktime.displayname"] = from_union([from_str, from_none], self.com_apple_quicktime_displayname)
         if self.com_apple_quicktime_keywords is not None:
-            result["COM.APPLE.QUICKTIME.KEYWORDS"] = from_union([from_str, from_none], self.com_apple_quicktime_keywords)
-        if self.tags_com_apple_quicktime_title is not None:
-            result["com.apple.quicktime.title"] = from_union([from_str, from_none], self.tags_com_apple_quicktime_title)
+            result["com.apple.quicktime.keywords"] = from_union([from_str, from_none], self.com_apple_quicktime_keywords)
         if self.com_apple_quicktime_title is not None:
-            result["COM.APPLE.QUICKTIME.TITLE"] = from_union([from_str, from_none], self.com_apple_quicktime_title)
-        if self.tags_comment is not None:
-            result["comment"] = from_union([from_str, from_none], self.tags_comment)
+            result["com.apple.quicktime.title"] = from_union([from_str, from_none], self.com_apple_quicktime_title)
         if self.comment is not None:
-            result["COMMENT"] = from_union([from_str, from_none], self.comment)
+            result["comment"] = from_union([from_str, from_none], self.comment)
         if self.compatible_brands is not None:
-            result["COMPATIBLE_BRANDS"] = from_union([from_str, from_none], self.compatible_brands)
-        if self.tags_compatible_brands is not None:
-            result["compatible_brands"] = from_union([from_str, from_none], self.tags_compatible_brands)
+            result["compatible_brands"] = from_union([from_str, from_none], self.compatible_brands)
         if self.composer is not None:
             result["composer"] = from_union([from_str, from_none], self.composer)
         if self.contact is not None:
             result["contact"] = from_union([from_str, from_none], self.contact)
         if self.content_type is not None:
-            result["CONTENT_TYPE"] = from_union([from_str, from_none], self.content_type)
+            result["content_type"] = from_union([from_str, from_none], self.content_type)
         if self.copyright is not None:
-            result["COPYRIGHT"] = from_union([from_str, from_none], self.copyright)
-        if self.tags_creation_time is not None:
-            result["creation_time"] = from_union([from_str, from_none], self.tags_creation_time)
+            result["copyright"] = from_union([from_str, from_none], self.copyright)
         if self.creation_time is not None:
-            result["CREATION_TIME"] = from_union([from_str, from_none], self.creation_time)
+            result["creation_time"] = from_union([from_str, from_none], self.creation_time)
         if self.creationdate is not None:
             result["creationdate"] = from_union([from_str, from_none], self.creationdate)
         if self.date is not None:
-            result["DATE"] = from_union([from_str, from_none], self.date)
-        if self.tags_date is not None:
-            result["date"] = from_union([from_str, from_none], self.tags_date)
+            result["date"] = from_union([from_str, from_none], self.date)
         if self.date_recorded is not None:
-            result["DATE_RECORDED"] = from_union([from_str, from_none], self.date_recorded)
+            result["date_recorded"] = from_union([from_str, from_none], self.date_recorded)
         if self.date_release is not None:
-            result["DATE_RELEASE"] = from_union([from_str, from_none], self.date_release)
+            result["date_release"] = from_union([from_str, from_none], self.date_release)
         if self.date_released is not None:
-            result["DATE_RELEASED"] = from_union([from_str, from_none], self.date_released)
+            result["date_released"] = from_union([from_str, from_none], self.date_released)
         if self.description is not None:
-            result["DESCRIPTION"] = from_union([from_str, from_none], self.description)
-        if self.tags_description is not None:
-            result["description"] = from_union([from_str, from_none], self.tags_description)
+            result["description"] = from_union([from_str, from_none], self.description)
         if self.director is not None:
-            result["DIRECTOR"] = from_union([from_str, from_none], self.director)
+            result["director"] = from_union([from_str, from_none], self.director)
         if self.encoded_by is not None:
-            result["ENCODED_BY"] = from_union([from_str, from_none], self.encoded_by)
+            result["encoded_by"] = from_union([from_str, from_none], self.encoded_by)
         if self.encoder is not None:
-            result["ENCODER"] = from_union([from_str, from_none], self.encoder)
-        if self.purple_encoder is not None:
-            result["encoder"] = from_union([from_str, from_none], self.purple_encoder)
-        if self.tags_encoder is not None:
-            result["Encoder"] = from_union([from_str, from_none], self.tags_encoder)
+            result["encoder"] = from_union([from_str, from_none], self.encoder)
         if self.encoder_eng is not None:
             result["encoder-eng"] = from_union([from_str, from_none], self.encoder_eng)
         if self.episode_id is not None:
-            result["EPISODE_ID"] = from_union([from_str, from_none], self.episode_id)
+            result["episode_id"] = from_union([from_str, from_none], self.episode_id)
         if self.episode_sort is not None:
             result["episode_sort"] = from_union([from_str, from_none], self.episode_sort)
         if self.file is not None:
-            result["FILE"] = from_union([from_str, from_none], self.file)
+            result["file"] = from_union([from_str, from_none], self.file)
         if self.filters is not None:
-            result["Filters"] = from_union([from_str, from_none], self.filters)
+            result["filters"] = from_union([from_str, from_none], self.filters)
         if self.genre is not None:
-            result["GENRE"] = from_union([from_str, from_none], self.genre)
-        if self.tags_genre is not None:
-            result["genre"] = from_union([from_str, from_none], self.tags_genre)
+            result["genre"] = from_union([from_str, from_none], self.genre)
         if self.hd_video is not None:
             result["hd_video"] = from_union([from_str, from_none], self.hd_video)
         if self.hw is not None:
-            result["Hw"] = from_union([from_str, from_none], self.hw)
+            result["hw"] = from_union([from_str, from_none], self.hw)
         if self.imdb is not None:
-            result["IMDB"] = from_union([from_str, from_none], self.imdb)
+            result["imdb"] = from_union([from_str, from_none], self.imdb)
         if self.imdb_eng is not None:
-            result["IMDB-eng"] = from_union([from_str, from_none], self.imdb_eng)
-        if self.i_tun_movi is not None:
-            result["iTunMOVI"] = from_union([from_str, from_none], self.i_tun_movi)
+            result["imdb-eng"] = from_union([from_str, from_none], self.imdb_eng)
+        if self.itunmovi is not None:
+            result["itunmovi"] = from_union([from_str, from_none], self.itunmovi)
         if self.keywords is not None:
-            result["KEYWORDS"] = from_union([from_str, from_none], self.keywords)
+            result["keywords"] = from_union([from_str, from_none], self.keywords)
         if self.location is not None:
             result["location"] = from_union([from_str, from_none], self.location)
         if self.major_brand is not None:
-            result["MAJOR_BRAND"] = from_union([from_str, from_none], self.major_brand)
-        if self.tags_major_brand is not None:
-            result["major_brand"] = from_union([from_str, from_none], self.tags_major_brand)
+            result["major_brand"] = from_union([from_str, from_none], self.major_brand)
         if self.maxrate is not None:
             result["maxrate"] = from_union([from_str, from_none], self.maxrate)
         if self.media_type is not None:
             result["media_type"] = from_union([from_str, from_none], self.media_type)
         if self.minor_version is not None:
-            result["MINOR_VERSION"] = from_union([from_str, from_none], self.minor_version)
-        if self.tags_minor_version is not None:
-            result["minor_version"] = from_union([from_str, from_none], self.tags_minor_version)
+            result["minor_version"] = from_union([from_str, from_none], self.minor_version)
         if self.modification_time is not None:
             result["modification_time"] = from_union([lambda x: x.isoformat(), from_none], self.modification_time)
         if self.movie_comment is not None:
-            result["MOVIE/COMMENT"] = from_union([from_str, from_none], self.movie_comment)
+            result["movie/comment"] = from_union([from_str, from_none], self.movie_comment)
         if self.movie_encoder is not None:
-            result["MOVIE/ENCODER"] = from_union([from_str, from_none], self.movie_encoder)
+            result["movie/encoder"] = from_union([from_str, from_none], self.movie_encoder)
         if self.producer is not None:
-            result["PRODUCER"] = from_union([from_str, from_none], self.producer)
+            result["producer"] = from_union([from_str, from_none], self.producer)
         if self.production_studio is not None:
-            result["PRODUCTION_STUDIO"] = from_union([from_str, from_none], self.production_studio)
+            result["production_studio"] = from_union([from_str, from_none], self.production_studio)
         if self.publisher is not None:
-            result["PUBLISHER"] = from_union([from_str, from_none], self.publisher)
+            result["publisher"] = from_union([from_str, from_none], self.publisher)
         if self.purl is not None:
-            result["PURL"] = from_union([from_str, from_none], self.purl)
+            result["purl"] = from_union([from_str, from_none], self.purl)
         if self.released_by is not None:
             result["released by"] = from_union([from_str, from_none], self.released_by)
         if self.scene is not None:
-            result["SCENE"] = from_union([from_str, from_none], self.scene)
+            result["scene"] = from_union([from_str, from_none], self.scene)
         if self.screenplay_by is not None:
-            result["SCREENPLAY_BY"] = from_union([from_str, from_none], self.screenplay_by)
-        if self.tags_season_number is not None:
-            result["season_number"] = from_union([from_str, from_none], self.tags_season_number)
+            result["screenplay_by"] = from_union([from_str, from_none], self.screenplay_by)
         if self.season_number is not None:
-            result["SEASON_NUMBER"] = from_union([from_str, from_none], self.season_number)
+            result["season_number"] = from_union([from_str, from_none], self.season_number)
         if self.show is not None:
-            result["SHOW"] = from_union([from_str, from_none], self.show)
+            result["show"] = from_union([from_str, from_none], self.show)
         if self.software is not None:
             result["software"] = from_union([from_str, from_none], self.software)
-        if self.summary is not None:
-            result["SUMMARY"] = from_union([from_str, from_none], self.summary)
         if self.synopsis is not None:
-            result["SYNOPSIS"] = from_union([from_str, from_none], self.synopsis)
-        if self.tags_synopsis is not None:
-            result["synopsis"] = from_union([from_str, from_none], self.tags_synopsis)
+            result["synopsis"] = from_union([from_str, from_none], self.synopsis)
         if self.te_is_reencode is not None:
             result["te_is_reencode"] = from_union([from_str, from_none], self.te_is_reencode)
         if self.timecode is not None:
-            result["TIMECODE"] = from_union([from_str, from_none], self.timecode)
-        if self.purple_title is not None:
-            result["title"] = from_union([from_str, from_none], self.purple_title)
-        if self.tags_title is not None:
-            result["Title"] = from_union([from_str, from_none], self.tags_title)
+            result["timecode"] = from_union([from_str, from_none], self.timecode)
         if self.title is not None:
-            result["TITLE"] = from_union([from_str, from_none], self.title)
+            result["title"] = from_union([from_str, from_none], self.title)
         if self.tmdb is not None:
-            result["TMDB"] = from_union([from_str, from_none], self.tmdb)
-        if self.total_parts is not None:
-            result["TOTAL_PARTS"] = from_union([from_str, from_none], self.total_parts)
-        if self.track is not None:
-            result["track"] = from_union([from_str, from_none], self.track)
+            result["tmdb"] = from_union([from_str, from_none], self.tmdb)
         if self.tvdb is not None:
-            result["TVDB"] = from_union([from_str, from_none], self.tvdb)
+            result["tvdb"] = from_union([from_str, from_none], self.tvdb)
         if self.tvdb2 is not None:
-            result["TVDB2"] = from_union([from_str, from_none], self.tvdb2)
+            result["tvdb2"] = from_union([from_str, from_none], self.tvdb2)
         if self.version is not None:
-            result["Version"] = from_union([from_str, from_none], self.version)
+            result["version"] = from_union([from_str, from_none], self.version)
         if self.version_eng is not None:
-            result["Version-eng"] = from_union([from_str, from_none], self.version_eng)
+            result["version-eng"] = from_union([from_str, from_none], self.version_eng)
         if self.writing_frontend is not None:
-            result["Writing frontend"] = from_union([from_str, from_none], self.writing_frontend)
+            result["writing frontend"] = from_union([from_str, from_none], self.writing_frontend)
         if self.written_by is not None:
-            result["WRITTEN_BY"] = from_union([from_str, from_none], self.written_by)
+            result["written_by"] = from_union([from_str, from_none], self.written_by)
         return result
 
 
 @dataclass
 class Format:
+    bit_rate: str
+    duration: str
     filename: str
     format_long_name: str
     format_name: str
@@ -443,15 +353,14 @@ class Format:
     nb_streams: int
     probe_score: int
     size: str
-    bit_rate: Optional[str] = None
-    duration: Optional[str] = None
-    nb_stream_groups: Optional[int] = None
     start_time: Optional[str] = None
     tags: Optional[FormatTags] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> "Format":
+    def from_dict(obj: Any) -> 'Format':
         assert isinstance(obj, dict)
+        bit_rate = from_str(obj.get("bit_rate"))
+        duration = from_str(obj.get("duration"))
         filename = from_str(obj.get("filename"))
         format_long_name = from_str(obj.get("format_long_name"))
         format_name = from_str(obj.get("format_name"))
@@ -459,15 +368,14 @@ class Format:
         nb_streams = from_int(obj.get("nb_streams"))
         probe_score = from_int(obj.get("probe_score"))
         size = from_str(obj.get("size"))
-        bit_rate = from_union([from_str, from_none], obj.get("bit_rate"))
-        duration = from_union([from_str, from_none], obj.get("duration"))
-        nb_stream_groups = from_union([from_int, from_none], obj.get("nb_stream_groups"))
         start_time = from_union([from_str, from_none], obj.get("start_time"))
         tags = from_union([FormatTags.from_dict, from_none], obj.get("tags"))
-        return Format(filename, format_long_name, format_name, nb_programs, nb_streams, probe_score, size, bit_rate, duration, nb_stream_groups, start_time, tags)
+        return Format(bit_rate, duration, filename, format_long_name, format_name, nb_programs, nb_streams, probe_score, size, start_time, tags)
 
     def to_dict(self) -> dict:
         result: dict = {}
+        result["bit_rate"] = from_str(self.bit_rate)
+        result["duration"] = from_str(self.duration)
         result["filename"] = from_str(self.filename)
         result["format_long_name"] = from_str(self.format_long_name)
         result["format_name"] = from_str(self.format_name)
@@ -475,12 +383,6 @@ class Format:
         result["nb_streams"] = from_int(self.nb_streams)
         result["probe_score"] = from_int(self.probe_score)
         result["size"] = from_str(self.size)
-        if self.bit_rate is not None:
-            result["bit_rate"] = from_union([from_str, from_none], self.bit_rate)
-        if self.duration is not None:
-            result["duration"] = from_union([from_str, from_none], self.duration)
-        if self.nb_stream_groups is not None:
-            result["nb_stream_groups"] = from_union([from_int, from_none], self.nb_stream_groups)
         if self.start_time is not None:
             result["start_time"] = from_union([from_str, from_none], self.start_time)
         if self.tags is not None:
@@ -510,7 +412,7 @@ class Disposition:
     still_image: Optional[int] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> "Disposition":
+    def from_dict(obj: Any) -> 'Disposition':
         assert isinstance(obj, dict)
         attached_pic = from_int(obj.get("attached_pic"))
         clean_effects = from_int(obj.get("clean_effects"))
@@ -592,7 +494,7 @@ class SideDataList:
     yaw: Optional[int] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> "SideDataList":
+    def from_dict(obj: Any) -> 'SideDataList':
         assert isinstance(obj, dict)
         side_data_type = from_str(obj.get("side_data_type"))
         avg_bitrate = from_union([from_int, from_none], obj.get("avg_bitrate"))
@@ -696,12 +598,9 @@ class StreamTags:
     duration: Optional[str] = None
     duration_eng: Optional[str] = None
     encoder: Optional[str] = None
-    tags_encoder: Optional[str] = None
     encoder_options: Optional[str] = None
     filename: Optional[str] = None
     handler_name: Optional[str] = None
-    tags_handler_name: Optional[str] = None
-    tags_language: Optional[str] = None
     language: Optional[str] = None
     mimetype: Optional[str] = None
     number_of_bytes: Optional[str] = None
@@ -711,122 +610,105 @@ class StreamTags:
     source: Optional[str] = None
     source_id: Optional[str] = None
     source_id_eng: Optional[str] = None
-    tags_timecode: Optional[str] = None
     timecode: Optional[str] = None
     title: Optional[str] = None
     track: Optional[str] = None
     vendor_id: Optional[str] = None
-    tags_vendor_id: Optional[str] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> "StreamTags":
+    def from_dict(obj: Any) -> 'StreamTags':
         assert isinstance(obj, dict)
-        statistics_tags = from_union([from_str, from_none], obj.get("_STATISTICS_TAGS"))
-        statistics_tags_eng = from_union([from_str, from_none], obj.get("_STATISTICS_TAGS-eng"))
-        statistics_writing_app = from_union([from_str, from_none], obj.get("_STATISTICS_WRITING_APP"))
-        statistics_writing_app_eng = from_union([from_str, from_none], obj.get("_STATISTICS_WRITING_APP-eng"))
-        statistics_writing_date_utc = from_union([from_str, from_none], obj.get("_STATISTICS_WRITING_DATE_UTC"))
-        statistics_writing_date_utc_eng = from_union([from_str, from_none], obj.get("_STATISTICS_WRITING_DATE_UTC-eng"))
+        statistics_tags = from_union([from_str, from_none], obj.get("_statistics_tags"))
+        statistics_tags_eng = from_union([from_str, from_none], obj.get("_statistics_tags-eng"))
+        statistics_writing_app = from_union([from_str, from_none], obj.get("_statistics_writing_app"))
+        statistics_writing_app_eng = from_union([from_str, from_none], obj.get("_statistics_writing_app-eng"))
+        statistics_writing_date_utc = from_union([from_str, from_none], obj.get("_statistics_writing_date_utc"))
+        statistics_writing_date_utc_eng = from_union([from_str, from_none], obj.get("_statistics_writing_date_utc-eng"))
         alpha_mode = from_union([from_str, from_none], obj.get("alpha_mode"))
-        bps = from_union([from_str, from_none], obj.get("BPS"))
-        bps_eng = from_union([from_str, from_none], obj.get("BPS-eng"))
+        bps = from_union([from_str, from_none], obj.get("bps"))
+        bps_eng = from_union([from_str, from_none], obj.get("bps-eng"))
         creation_time = from_union([from_datetime, from_none], obj.get("creation_time"))
-        duration = from_union([from_str, from_none], obj.get("DURATION"))
-        duration_eng = from_union([from_str, from_none], obj.get("DURATION-eng"))
-        encoder = from_union([from_str, from_none], obj.get("ENCODER"))
-        tags_encoder = from_union([from_str, from_none], obj.get("encoder"))
-        encoder_options = from_union([from_str, from_none], obj.get("ENCODER_OPTIONS"))
+        duration = from_union([from_str, from_none], obj.get("duration"))
+        duration_eng = from_union([from_str, from_none], obj.get("duration-eng"))
+        encoder = from_union([from_str, from_none], obj.get("encoder"))
+        encoder_options = from_union([from_str, from_none], obj.get("encoder_options"))
         filename = from_union([from_str, from_none], obj.get("filename"))
-        handler_name = from_union([from_str, from_none], obj.get("HANDLER_NAME"))
-        tags_handler_name = from_union([from_str, from_none], obj.get("handler_name"))
-        tags_language = from_union([from_str, from_none], obj.get("language"))
-        language = from_union([from_str, from_none], obj.get("LANGUAGE"))
+        handler_name = from_union([from_str, from_none], obj.get("handler_name"))
+        language = from_union([from_str, from_none], obj.get("language"))
         mimetype = from_union([from_str, from_none], obj.get("mimetype"))
-        number_of_bytes = from_union([from_str, from_none], obj.get("NUMBER_OF_BYTES"))
-        number_of_bytes_eng = from_union([from_str, from_none], obj.get("NUMBER_OF_BYTES-eng"))
-        number_of_frames = from_union([from_str, from_none], obj.get("NUMBER_OF_FRAMES"))
-        number_of_frames_eng = from_union([from_str, from_none], obj.get("NUMBER_OF_FRAMES-eng"))
-        source = from_union([from_str, from_none], obj.get("Source"))
-        source_id = from_union([from_str, from_none], obj.get("SOURCE_ID"))
-        source_id_eng = from_union([from_str, from_none], obj.get("SOURCE_ID-eng"))
-        tags_timecode = from_union([from_str, from_none], obj.get("timecode"))
-        timecode = from_union([from_str, from_none], obj.get("TIMECODE"))
+        number_of_bytes = from_union([from_str, from_none], obj.get("number_of_bytes"))
+        number_of_bytes_eng = from_union([from_str, from_none], obj.get("number_of_bytes-eng"))
+        number_of_frames = from_union([from_str, from_none], obj.get("number_of_frames"))
+        number_of_frames_eng = from_union([from_str, from_none], obj.get("number_of_frames-eng"))
+        source = from_union([from_str, from_none], obj.get("source"))
+        source_id = from_union([from_str, from_none], obj.get("source_id"))
+        source_id_eng = from_union([from_str, from_none], obj.get("source_id-eng"))
+        timecode = from_union([from_str, from_none], obj.get("timecode"))
         title = from_union([from_str, from_none], obj.get("title"))
         track = from_union([from_str, from_none], obj.get("track"))
-        vendor_id = from_union([from_str, from_none], obj.get("VENDOR_ID"))
-        tags_vendor_id = from_union([from_str, from_none], obj.get("vendor_id"))
-        return StreamTags(statistics_tags, statistics_tags_eng, statistics_writing_app, statistics_writing_app_eng, statistics_writing_date_utc, statistics_writing_date_utc_eng, alpha_mode, bps, bps_eng, creation_time, duration, duration_eng, encoder, tags_encoder, encoder_options, filename, handler_name, tags_handler_name, tags_language, language, mimetype, number_of_bytes, number_of_bytes_eng, number_of_frames, number_of_frames_eng, source, source_id, source_id_eng, tags_timecode, timecode, title, track, vendor_id, tags_vendor_id)
+        vendor_id = from_union([from_str, from_none], obj.get("vendor_id"))
+        return StreamTags(statistics_tags, statistics_tags_eng, statistics_writing_app, statistics_writing_app_eng, statistics_writing_date_utc, statistics_writing_date_utc_eng, alpha_mode, bps, bps_eng, creation_time, duration, duration_eng, encoder, encoder_options, filename, handler_name, language, mimetype, number_of_bytes, number_of_bytes_eng, number_of_frames, number_of_frames_eng, source, source_id, source_id_eng, timecode, title, track, vendor_id)
 
     def to_dict(self) -> dict:
         result: dict = {}
         if self.statistics_tags is not None:
-            result["_STATISTICS_TAGS"] = from_union([from_str, from_none], self.statistics_tags)
+            result["_statistics_tags"] = from_union([from_str, from_none], self.statistics_tags)
         if self.statistics_tags_eng is not None:
-            result["_STATISTICS_TAGS-eng"] = from_union([from_str, from_none], self.statistics_tags_eng)
+            result["_statistics_tags-eng"] = from_union([from_str, from_none], self.statistics_tags_eng)
         if self.statistics_writing_app is not None:
-            result["_STATISTICS_WRITING_APP"] = from_union([from_str, from_none], self.statistics_writing_app)
+            result["_statistics_writing_app"] = from_union([from_str, from_none], self.statistics_writing_app)
         if self.statistics_writing_app_eng is not None:
-            result["_STATISTICS_WRITING_APP-eng"] = from_union([from_str, from_none], self.statistics_writing_app_eng)
+            result["_statistics_writing_app-eng"] = from_union([from_str, from_none], self.statistics_writing_app_eng)
         if self.statistics_writing_date_utc is not None:
-            result["_STATISTICS_WRITING_DATE_UTC"] = from_union([from_str, from_none], self.statistics_writing_date_utc)
+            result["_statistics_writing_date_utc"] = from_union([from_str, from_none], self.statistics_writing_date_utc)
         if self.statistics_writing_date_utc_eng is not None:
-            result["_STATISTICS_WRITING_DATE_UTC-eng"] = from_union([from_str, from_none], self.statistics_writing_date_utc_eng)
+            result["_statistics_writing_date_utc-eng"] = from_union([from_str, from_none], self.statistics_writing_date_utc_eng)
         if self.alpha_mode is not None:
             result["alpha_mode"] = from_union([from_str, from_none], self.alpha_mode)
         if self.bps is not None:
-            result["BPS"] = from_union([from_str, from_none], self.bps)
+            result["bps"] = from_union([from_str, from_none], self.bps)
         if self.bps_eng is not None:
-            result["BPS-eng"] = from_union([from_str, from_none], self.bps_eng)
+            result["bps-eng"] = from_union([from_str, from_none], self.bps_eng)
         if self.creation_time is not None:
             result["creation_time"] = from_union([lambda x: x.isoformat(), from_none], self.creation_time)
         if self.duration is not None:
-            result["DURATION"] = from_union([from_str, from_none], self.duration)
+            result["duration"] = from_union([from_str, from_none], self.duration)
         if self.duration_eng is not None:
-            result["DURATION-eng"] = from_union([from_str, from_none], self.duration_eng)
+            result["duration-eng"] = from_union([from_str, from_none], self.duration_eng)
         if self.encoder is not None:
-            result["ENCODER"] = from_union([from_str, from_none], self.encoder)
-        if self.tags_encoder is not None:
-            result["encoder"] = from_union([from_str, from_none], self.tags_encoder)
+            result["encoder"] = from_union([from_str, from_none], self.encoder)
         if self.encoder_options is not None:
-            result["ENCODER_OPTIONS"] = from_union([from_str, from_none], self.encoder_options)
+            result["encoder_options"] = from_union([from_str, from_none], self.encoder_options)
         if self.filename is not None:
             result["filename"] = from_union([from_str, from_none], self.filename)
         if self.handler_name is not None:
-            result["HANDLER_NAME"] = from_union([from_str, from_none], self.handler_name)
-        if self.tags_handler_name is not None:
-            result["handler_name"] = from_union([from_str, from_none], self.tags_handler_name)
-        if self.tags_language is not None:
-            result["language"] = from_union([from_str, from_none], self.tags_language)
+            result["handler_name"] = from_union([from_str, from_none], self.handler_name)
         if self.language is not None:
-            result["LANGUAGE"] = from_union([from_str, from_none], self.language)
+            result["language"] = from_union([from_str, from_none], self.language)
         if self.mimetype is not None:
             result["mimetype"] = from_union([from_str, from_none], self.mimetype)
         if self.number_of_bytes is not None:
-            result["NUMBER_OF_BYTES"] = from_union([from_str, from_none], self.number_of_bytes)
+            result["number_of_bytes"] = from_union([from_str, from_none], self.number_of_bytes)
         if self.number_of_bytes_eng is not None:
-            result["NUMBER_OF_BYTES-eng"] = from_union([from_str, from_none], self.number_of_bytes_eng)
+            result["number_of_bytes-eng"] = from_union([from_str, from_none], self.number_of_bytes_eng)
         if self.number_of_frames is not None:
-            result["NUMBER_OF_FRAMES"] = from_union([from_str, from_none], self.number_of_frames)
+            result["number_of_frames"] = from_union([from_str, from_none], self.number_of_frames)
         if self.number_of_frames_eng is not None:
-            result["NUMBER_OF_FRAMES-eng"] = from_union([from_str, from_none], self.number_of_frames_eng)
+            result["number_of_frames-eng"] = from_union([from_str, from_none], self.number_of_frames_eng)
         if self.source is not None:
-            result["Source"] = from_union([from_str, from_none], self.source)
+            result["source"] = from_union([from_str, from_none], self.source)
         if self.source_id is not None:
-            result["SOURCE_ID"] = from_union([from_str, from_none], self.source_id)
+            result["source_id"] = from_union([from_str, from_none], self.source_id)
         if self.source_id_eng is not None:
-            result["SOURCE_ID-eng"] = from_union([from_str, from_none], self.source_id_eng)
-        if self.tags_timecode is not None:
-            result["timecode"] = from_union([from_str, from_none], self.tags_timecode)
+            result["source_id-eng"] = from_union([from_str, from_none], self.source_id_eng)
         if self.timecode is not None:
-            result["TIMECODE"] = from_union([from_str, from_none], self.timecode)
+            result["timecode"] = from_union([from_str, from_none], self.timecode)
         if self.title is not None:
             result["title"] = from_union([from_str, from_none], self.title)
         if self.track is not None:
             result["track"] = from_union([from_str, from_none], self.track)
         if self.vendor_id is not None:
-            result["VENDOR_ID"] = from_union([from_str, from_none], self.vendor_id)
-        if self.tags_vendor_id is not None:
-            result["vendor_id"] = from_union([from_str, from_none], self.tags_vendor_id)
+            result["vendor_id"] = from_union([from_str, from_none], self.vendor_id)
         return result
 
 
@@ -890,7 +772,7 @@ class Stream:
     width: Optional[int] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> "Stream":
+    def from_dict(obj: Any) -> 'Stream':
         assert isinstance(obj, dict)
         avg_frame_rate = from_str(obj.get("avg_frame_rate"))
         codec_tag = from_str(obj.get("codec_tag"))
@@ -1065,7 +947,7 @@ class Ffprobe:
     streams: List[Stream]
 
     @staticmethod
-    def from_dict(obj: Any) -> "Ffprobe":
+    def from_dict(obj: Any) -> 'Ffprobe':
         assert isinstance(obj, dict)
         format = Format.from_dict(obj.get("format"))
         streams = from_list(Stream.from_dict, obj.get("streams"))
@@ -1078,9 +960,9 @@ class Ffprobe:
         return result
 
 
-def ffprobe_from_dict(s: Any) -> Ffprobe:
+def f_fprobe_from_dict(s: Any) -> Ffprobe:
     return Ffprobe.from_dict(s)
 
 
-def ffprobe_to_dict(x: Ffprobe) -> Any:
+def f_fprobe_to_dict(x: Ffprobe) -> Any:
     return to_class(Ffprobe, x)

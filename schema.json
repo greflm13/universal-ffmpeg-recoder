@@ -173,7 +173,7 @@
           "tags": {
             "type": "object",
             "properties": {
-              "DURATION": {
+              "duration": {
                 "type": "string"
               },
               "language": {
@@ -182,57 +182,29 @@
               "title": {
                 "type": "string"
               },
-              "ENCODER": {
+              "encoder": {
                 "type": "string"
               },
-              "BPS-eng": {
+              "bps-eng": {
                 "type": "string"
               },
-              "DURATION-eng": {
+              "duration-eng": {
                 "type": "string"
               },
-              "NUMBER_OF_FRAMES-eng": {
+              "number_of_frames-eng": {
                 "type": "string"
               },
-              "NUMBER_OF_BYTES-eng": {
+              "number_of_bytes-eng": {
                 "type": "string"
               },
-              "_STATISTICS_WRITING_APP-eng": {
+              "_statistics_writing_app-eng": {
                 "type": "string"
               },
-              "_STATISTICS_WRITING_DATE_UTC-eng": {
+              "_statistics_writing_date_utc-eng": {
                 "type": "string"
               },
-              "_STATISTICS_TAGS-eng": {
+              "_statistics_tags-eng": {
                 "type": "string"
-              },
-              "HANDLER_NAME": {
-                "type": "string"
-              },
-              "VENDOR_ID": {
-                "type": "string"
-              },
-              "BPS": {
-                "type": "string"
-              },
-              "NUMBER_OF_FRAMES": {
-                "type": "string"
-              },
-              "NUMBER_OF_BYTES": {
-                "type": "string"
-              },
-              "_STATISTICS_WRITING_APP": {
-                "type": "string"
-              },
-              "_STATISTICS_WRITING_DATE_UTC": {
-                "type": "string"
-              },
-              "_STATISTICS_TAGS": {
-                "type": "string"
-              },
-              "creation_time": {
-                "type": "string",
-                "format": "date-time"
               },
               "handler_name": {
                 "type": "string"
@@ -240,8 +212,27 @@
               "vendor_id": {
                 "type": "string"
               },
-              "encoder": {
+              "bps": {
                 "type": "string"
+              },
+              "number_of_frames": {
+                "type": "string"
+              },
+              "number_of_bytes": {
+                "type": "string"
+              },
+              "_statistics_writing_app": {
+                "type": "string"
+              },
+              "_statistics_writing_date_utc": {
+                "type": "string"
+              },
+              "_statistics_tags": {
+                "type": "string"
+              },
+              "creation_time": {
+                "type": "string",
+                "format": "date-time"
               },
               "timecode": {
                 "type": "string"
@@ -255,25 +246,19 @@
               "mimetype": {
                 "type": "string"
               },
-              "SOURCE_ID-eng": {
+              "source_id-eng": {
                 "type": "string"
               },
-              "SOURCE_ID": {
+              "source_id": {
                 "type": "string"
               },
-              "TIMECODE": {
-                "type": "string"
-              },
-              "LANGUAGE": {
-                "type": "string"
-              },
-              "Source": {
+              "source": {
                 "type": "string"
               },
               "track": {
                 "type": "string"
               },
-              "ENCODER_OPTIONS": {
+              "encoder_options": {
                 "type": "string"
               }
             }
@@ -491,25 +476,16 @@
             "title": {
               "type": "string"
             },
-            "ENCODER": {
+            "encoder": {
               "type": "string"
             },
-            "COMPATIBLE_BRANDS": {
-              "type": "string"
-            },
-            "MAJOR_BRAND": {
-              "type": "string"
-            },
-            "MINOR_VERSION": {
+            "compatible_brands": {
               "type": "string"
             },
             "major_brand": {
               "type": "string"
             },
             "minor_version": {
-              "type": "string"
-            },
-            "compatible_brands": {
               "type": "string"
             },
             "creation_time": {
@@ -538,43 +514,25 @@
             "com.apple.quicktime.title": {
               "type": "string"
             },
-            "encoder": {
-              "type": "string"
-            },
             "comment": {
               "type": "string"
             },
             "hd_video": {
               "type": "string"
             },
-            "SCENE": {
+            "scene": {
               "type": "string"
             },
-            "FILE": {
-              "type": "string"
-            },
-            "DATE": {
+            "file": {
               "type": "string"
             },
             "date": {
               "type": "string"
             },
-            "Writing frontend": {
+            "writing frontend": {
               "type": "string"
             },
-            "PURL": {
-              "type": "string"
-            },
-            "COMMENT": {
-              "type": "string"
-            },
-            "ARTIST": {
-              "type": "string"
-            },
-            "DESCRIPTION": {
-              "type": "string"
-            },
-            "SYNOPSIS": {
+            "purl": {
               "type": "string"
             },
             "artist": {
@@ -598,7 +556,7 @@
             "encoder-eng": {
               "type": "string"
             },
-            "TIMECODE": {
+            "timecode": {
               "type": "string"
             },
             "composer": {
@@ -613,25 +571,10 @@
             "episode_sort": {
               "type": "string"
             },
-            "iTunMOVI": {
+            "itunmovi": {
               "type": "string"
             },
-            "KEYWORDS": {
-              "type": "string"
-            },
-            "COM.APPLE.QUICKTIME.TITLE": {
-              "type": "string"
-            },
-            "COM.APPLE.QUICKTIME.DESCRIPTION": {
-              "type": "string"
-            },
-            "COM.APPLE.QUICKTIME.AUTHOR": {
-              "type": "string"
-            },
-            "COM.APPLE.QUICKTIME.DISPLAYNAME": {
-              "type": "string"
-            },
-            "COM.APPLE.QUICKTIME.KEYWORDS": {
+            "keywords": {
               "type": "string"
             },
             "software": {
@@ -641,7 +584,7 @@
               "type": "string",
               "format": "date-time"
             },
-            "Hw": {
+            "hw": {
               "type": "string"
             },
             "bitrate": {
@@ -656,16 +599,16 @@
             "audiodelay": {
               "type": "string"
             },
-            "canSeekToEnd": {
+            "canseektoend": {
               "type": "string"
             },
             "creationdate": {
               "type": "string"
             },
-            "PUBLISHER": {
+            "publisher": {
               "type": "string"
             },
-            "TVDB2": {
+            "tvdb2": {
               "type": "string"
             },
             "released by": {
@@ -674,118 +617,90 @@
             "contact": {
               "type": "string"
             },
-            "Version": {
+            "version": {
               "type": "string"
             },
-            "ABJ": {
+            "abj": {
               "type": "string"
             },
-            "Filters": {
+            "filters": {
               "type": "string"
             },
-            "Version-eng": {
+            "version-eng": {
               "type": "string"
             },
-            "MOVIE/ENCODER": {
+            "movie/encoder": {
               "type": "string"
             },
-            "Title": {
+            "imdb": {
               "type": "string"
             },
-            "IMDB": {
+            "tmdb": {
               "type": "string"
             },
-            "TMDB": {
+            "tvdb": {
               "type": "string"
             },
-            "TVDB": {
+            "show": {
               "type": "string"
             },
-            "SHOW": {
+            "episode_id": {
               "type": "string"
             },
-            "SEASON_NUMBER": {
+            "movie/comment": {
               "type": "string"
             },
-            "EPISODE_ID": {
+            "actor": {
               "type": "string"
             },
-            "CREATION_TIME": {
+            "director": {
               "type": "string"
             },
-            "MOVIE/COMMENT": {
+            "producer": {
               "type": "string"
             },
-            "TITLE": {
+            "screenplay_by": {
               "type": "string"
             },
-            "ACTOR": {
+            "written_by": {
               "type": "string"
             },
-            "DIRECTOR": {
+            "production_studio": {
               "type": "string"
             },
-            "PRODUCER": {
+            "genre": {
               "type": "string"
             },
-            "SCREENPLAY_BY": {
+            "date_released": {
               "type": "string"
             },
-            "WRITTEN_BY": {
+            "date_release": {
               "type": "string"
             },
-            "PRODUCTION_STUDIO": {
+            "date_recorded": {
               "type": "string"
             },
-            "GENRE": {
+            "content_type": {
               "type": "string"
             },
-            "DATE_RELEASED": {
+            "copyright": {
               "type": "string"
             },
-            "DATE_RELEASE": {
-              "type": "string"
-            },
-            "DATE_RECORDED": {
-              "type": "string"
-            },
-            "CONTENT_TYPE": {
-              "type": "string"
-            },
-            "COPYRIGHT": {
-              "type": "string"
-            },
-            "ENCODED_BY": {
-              "type": "string"
-            },
-            "Encoder": {
+            "encoded_by": {
               "type": "string"
             },
             "": {
               "type": "string"
             },
-            "IMDB-eng": {
-              "type": "string"
-            },
-            "SUMMARY": {
-              "type": "string"
-            },
-            "track": {
-              "type": "string"
-            },
-            "TOTAL_PARTS": {
-              "type": "string"
-            },
-            "genre": {
+            "imdb-eng": {
               "type": "string"
             }
           }
-        },
-        "nb_stream_groups": {
-          "type": "integer"
         }
       },
       "required": [
+        "bit_rate",
+        "duration",
         "filename",
         "format_long_name",
         "format_name",
