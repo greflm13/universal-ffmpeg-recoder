@@ -50,13 +50,14 @@ def get_movie_name(file: str, token: str):
                 year: str = match.group()
                 movie_name: str = file[: match.start()].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
                 output_file = f"{movie_name}({year}).mkv"
-                response = requests.get(f"https://api4.thetvdb.com/v4/series?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+                response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
                 ret = response.json()["data"][0]
                 metadata = {"comment": ret["overviews"]["eng"], "title": ret["extended_title"], "date": ret["first_air_time"]}
             else:
                 output_file: str = os.path.splitext(file)[0] + ".mkv"
                 metadata = {"title": os.path.splitext(file)[0]}
-    return output_file, metadata
+            return output_file, metadata
+    return None, None
 
 
 def get_series_from_tvdb(series: str, token: str) -> list:
@@ -247,6 +248,8 @@ def recode(file: str, path: str | None = None, metadata: dict = {}, token: str |
 
     if path is None:
         output_file, metadata = get_movie_name(file, token)
+        if output_file is None:
+            return
     else:
         output_file = path
 
