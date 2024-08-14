@@ -83,6 +83,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
                 ep = ""
                 titles: list[str] = []
                 comments: list[str] = [""]
+                date = None
                 for episode in episodes:
                     ep = ep + "E" + episode.rjust(2, "0")
                     for epi in seriesobj:
@@ -399,7 +400,7 @@ def main():
         else:
             for file in sorted(os.listdir(os.getcwd())):
                 try:
-                    recode(file, token)
+                    recode(file, token=token)
                 except RuntimeError:
                     continue
     else:
@@ -411,7 +412,7 @@ def main():
                 recode_series(sys.argv[1], token)
             else:
                 for file in sorted(os.listdir(sys.argv[1])):
-                    recode(sys.argv[1] + "/" + file, token)
+                    recode(sys.argv[1] + "/" + file, token=token)
         elif sys.argv[1] == "rename":
             folder = os.getcwd()
             series = os.path.basename(folder)
@@ -420,7 +421,7 @@ def main():
                 if not os.path.isfile(os.path.join(folder, dire)):
                     for file in sorted(os.listdir(os.path.realpath(dire))):
                         try:
-                            season, name = get_series_name(series, file, seriesobj)
+                            season, name, metadata = get_series_name(series, file, seriesobj)
                         except RuntimeError:
                             continue
                         if season is not None:
@@ -433,7 +434,7 @@ def main():
                                 shutil.move(old, new)
         for container in VIDEO_CONTAINERS:
             if sys.argv[1].endswith(container):
-                recode(sys.argv[1], token)
+                recode(sys.argv[1], token=token)
 
 
 if __name__ == "__main__":
