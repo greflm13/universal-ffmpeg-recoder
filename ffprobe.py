@@ -21,18 +21,27 @@ def from_union(fs, x):
     for f in fs:
         try:
             return f(x)
-        except:
+        except AssertionError:
             pass
     assert False
 
 
 def from_datetime(x: Any) -> datetime:
+    assert isinstance(x, str)
     return dateutil.parser.parse(x)
 
 
 def from_int(x: Any) -> int:
     assert isinstance(x, int) and not isinstance(x, bool)
     return x
+
+
+def from_bool(x: Any) -> bool:
+    if isinstance(x, int) and x == 0 or x == 1:
+        return bool(x)
+    elif isinstance(x, bool):
+        return x
+    assert False
 
 
 def to_class(c: Type[T], x: Any) -> dict:
@@ -120,7 +129,7 @@ class FormatTags:
     written_by: Optional[str] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> 'FormatTags':
+    def from_dict(obj: Any) -> "FormatTags":
         assert isinstance(obj, dict)
         empty = from_union([from_str, from_none], obj.get(""))
         abj = from_union([from_str, from_none], obj.get("abj"))
@@ -193,7 +202,79 @@ class FormatTags:
         version_eng = from_union([from_str, from_none], obj.get("version-eng"))
         writing_frontend = from_union([from_str, from_none], obj.get("writing frontend"))
         written_by = from_union([from_str, from_none], obj.get("written_by"))
-        return FormatTags(empty, abj, actor, artist, audiodelay, bitrate, canseektoend, com_android_capture_fps, com_android_version, com_apple_quicktime_author, com_apple_quicktime_description, com_apple_quicktime_displayname, com_apple_quicktime_keywords, com_apple_quicktime_title, comment, compatible_brands, composer, contact, content_type, copyright, creation_time, creationdate, date, date_recorded, date_release, date_released, description, director, encoded_by, encoder, encoder_eng, episode_id, episode_sort, file, filters, genre, hd_video, hw, imdb, imdb_eng, itunmovi, keywords, location, major_brand, maxrate, media_type, minor_version, modification_time, movie_comment, movie_encoder, producer, production_studio, publisher, purl, released_by, scene, screenplay_by, season_number, show, software, synopsis, te_is_reencode, timecode, title, tmdb, tvdb, tvdb2, version, version_eng, writing_frontend, written_by)
+        return FormatTags(
+            empty,
+            abj,
+            actor,
+            artist,
+            audiodelay,
+            bitrate,
+            canseektoend,
+            com_android_capture_fps,
+            com_android_version,
+            com_apple_quicktime_author,
+            com_apple_quicktime_description,
+            com_apple_quicktime_displayname,
+            com_apple_quicktime_keywords,
+            com_apple_quicktime_title,
+            comment,
+            compatible_brands,
+            composer,
+            contact,
+            content_type,
+            copyright,
+            creation_time,
+            creationdate,
+            date,
+            date_recorded,
+            date_release,
+            date_released,
+            description,
+            director,
+            encoded_by,
+            encoder,
+            encoder_eng,
+            episode_id,
+            episode_sort,
+            file,
+            filters,
+            genre,
+            hd_video,
+            hw,
+            imdb,
+            imdb_eng,
+            itunmovi,
+            keywords,
+            location,
+            major_brand,
+            maxrate,
+            media_type,
+            minor_version,
+            modification_time,
+            movie_comment,
+            movie_encoder,
+            producer,
+            production_studio,
+            publisher,
+            purl,
+            released_by,
+            scene,
+            screenplay_by,
+            season_number,
+            show,
+            software,
+            synopsis,
+            te_is_reencode,
+            timecode,
+            title,
+            tmdb,
+            tvdb,
+            tvdb2,
+            version,
+            version_eng,
+            writing_frontend,
+            written_by,
+        )
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -357,7 +438,7 @@ class Format:
     tags: Optional[FormatTags] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> 'Format':
+    def from_dict(obj: Any) -> "Format":
         assert isinstance(obj, dict)
         bit_rate = from_str(obj.get("bit_rate"))
         duration = from_str(obj.get("duration"))
@@ -370,7 +451,19 @@ class Format:
         size = from_str(obj.get("size"))
         start_time = from_union([from_str, from_none], obj.get("start_time"))
         tags = from_union([FormatTags.from_dict, from_none], obj.get("tags"))
-        return Format(bit_rate, duration, filename, format_long_name, format_name, nb_programs, nb_streams, probe_score, size, start_time, tags)
+        return Format(
+            bit_rate,
+            duration,
+            filename,
+            format_long_name,
+            format_name,
+            nb_programs,
+            nb_streams,
+            probe_score,
+            size,
+            start_time,
+            tags,
+        )
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -392,74 +485,93 @@ class Format:
 
 @dataclass
 class Disposition:
-    attached_pic: int
-    clean_effects: int
-    comment: int
-    default: int
-    dub: int
-    forced: int
-    hearing_impaired: int
-    karaoke: int
-    lyrics: int
-    original: int
-    timed_thumbnails: int
-    visual_impaired: int
-    captions: Optional[int] = None
-    dependent: Optional[int] = None
-    descriptions: Optional[int] = None
-    metadata: Optional[int] = None
-    non_diegetic: Optional[int] = None
-    still_image: Optional[int] = None
+    attached_pic: bool
+    clean_effects: bool
+    comment: bool
+    default: bool
+    dub: bool
+    forced: bool
+    hearing_impaired: bool
+    karaoke: bool
+    lyrics: bool
+    original: bool
+    timed_thumbnails: bool
+    visual_impaired: bool
+    captions: Optional[bool] = None
+    dependent: Optional[bool] = None
+    descriptions: Optional[bool] = None
+    metadata: Optional[bool] = None
+    non_diegetic: Optional[bool] = None
+    still_image: Optional[bool] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> 'Disposition':
+    def from_dict(obj: Any) -> "Disposition":
         assert isinstance(obj, dict)
-        attached_pic = from_int(obj.get("attached_pic"))
-        clean_effects = from_int(obj.get("clean_effects"))
-        comment = from_int(obj.get("comment"))
-        default = from_int(obj.get("default"))
-        dub = from_int(obj.get("dub"))
-        forced = from_int(obj.get("forced"))
-        hearing_impaired = from_int(obj.get("hearing_impaired"))
-        karaoke = from_int(obj.get("karaoke"))
-        lyrics = from_int(obj.get("lyrics"))
-        original = from_int(obj.get("original"))
-        timed_thumbnails = from_int(obj.get("timed_thumbnails"))
-        visual_impaired = from_int(obj.get("visual_impaired"))
-        captions = from_union([from_int, from_none], obj.get("captions"))
-        dependent = from_union([from_int, from_none], obj.get("dependent"))
-        descriptions = from_union([from_int, from_none], obj.get("descriptions"))
-        metadata = from_union([from_int, from_none], obj.get("metadata"))
-        non_diegetic = from_union([from_int, from_none], obj.get("non_diegetic"))
-        still_image = from_union([from_int, from_none], obj.get("still_image"))
-        return Disposition(attached_pic, clean_effects, comment, default, dub, forced, hearing_impaired, karaoke, lyrics, original, timed_thumbnails, visual_impaired, captions, dependent, descriptions, metadata, non_diegetic, still_image)
+        attached_pic = from_bool(obj.get("attached_pic"))
+        clean_effects = from_bool(obj.get("clean_effects"))
+        comment = from_bool(obj.get("comment"))
+        default = from_bool(obj.get("default"))
+        dub = from_bool(obj.get("dub"))
+        forced = from_bool(obj.get("forced"))
+        hearing_impaired = from_bool(obj.get("hearing_impaired"))
+        karaoke = from_bool(obj.get("karaoke"))
+        lyrics = from_bool(obj.get("lyrics"))
+        original = from_bool(obj.get("original"))
+        timed_thumbnails = from_bool(obj.get("timed_thumbnails"))
+        visual_impaired = from_bool(obj.get("visual_impaired"))
+        captions = from_union([from_bool, from_none], obj.get("captions"))
+        dependent = from_union([from_bool, from_none], obj.get("dependent"))
+        descriptions = from_union([from_bool, from_none], obj.get("descriptions"))
+        metadata = from_union([from_bool, from_none], obj.get("metadata"))
+        non_diegetic = from_union([from_bool, from_none], obj.get("non_diegetic"))
+        still_image = from_union([from_bool, from_none], obj.get("still_image"))
+        return Disposition(
+            attached_pic,
+            clean_effects,
+            comment,
+            default,
+            dub,
+            forced,
+            hearing_impaired,
+            karaoke,
+            lyrics,
+            original,
+            timed_thumbnails,
+            visual_impaired,
+            captions,
+            dependent,
+            descriptions,
+            metadata,
+            non_diegetic,
+            still_image,
+        )
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["attached_pic"] = from_int(self.attached_pic)
-        result["clean_effects"] = from_int(self.clean_effects)
-        result["comment"] = from_int(self.comment)
-        result["default"] = from_int(self.default)
-        result["dub"] = from_int(self.dub)
-        result["forced"] = from_int(self.forced)
-        result["hearing_impaired"] = from_int(self.hearing_impaired)
-        result["karaoke"] = from_int(self.karaoke)
-        result["lyrics"] = from_int(self.lyrics)
-        result["original"] = from_int(self.original)
-        result["timed_thumbnails"] = from_int(self.timed_thumbnails)
-        result["visual_impaired"] = from_int(self.visual_impaired)
+        result["attached_pic"] = from_bool(self.attached_pic)
+        result["clean_effects"] = from_bool(self.clean_effects)
+        result["comment"] = from_bool(self.comment)
+        result["default"] = from_bool(self.default)
+        result["dub"] = from_bool(self.dub)
+        result["forced"] = from_bool(self.forced)
+        result["hearing_impaired"] = from_bool(self.hearing_impaired)
+        result["karaoke"] = from_bool(self.karaoke)
+        result["lyrics"] = from_bool(self.lyrics)
+        result["original"] = from_bool(self.original)
+        result["timed_thumbnails"] = from_bool(self.timed_thumbnails)
+        result["visual_impaired"] = from_bool(self.visual_impaired)
         if self.captions is not None:
-            result["captions"] = from_union([from_int, from_none], self.captions)
+            result["captions"] = from_union([from_bool, from_none], self.captions)
         if self.dependent is not None:
-            result["dependent"] = from_union([from_int, from_none], self.dependent)
+            result["dependent"] = from_union([from_bool, from_none], self.dependent)
         if self.descriptions is not None:
-            result["descriptions"] = from_union([from_int, from_none], self.descriptions)
+            result["descriptions"] = from_union([from_bool, from_none], self.descriptions)
         if self.metadata is not None:
-            result["metadata"] = from_union([from_int, from_none], self.metadata)
+            result["metadata"] = from_union([from_bool, from_none], self.metadata)
         if self.non_diegetic is not None:
-            result["non_diegetic"] = from_union([from_int, from_none], self.non_diegetic)
+            result["non_diegetic"] = from_union([from_bool, from_none], self.non_diegetic)
         if self.still_image is not None:
-            result["still_image"] = from_union([from_int, from_none], self.still_image)
+            result["still_image"] = from_union([from_bool, from_none], self.still_image)
         return result
 
 
@@ -494,7 +606,7 @@ class SideDataList:
     yaw: Optional[int] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> 'SideDataList':
+    def from_dict(obj: Any) -> "SideDataList":
         assert isinstance(obj, dict)
         side_data_type = from_str(obj.get("side_data_type"))
         avg_bitrate = from_union([from_int, from_none], obj.get("avg_bitrate"))
@@ -523,7 +635,35 @@ class SideDataList:
         white_point_x = from_union([from_str, from_none], obj.get("white_point_x"))
         white_point_y = from_union([from_str, from_none], obj.get("white_point_y"))
         yaw = from_union([from_int, from_none], obj.get("yaw"))
-        return SideDataList(side_data_type, avg_bitrate, blue_x, blue_y, buffer_size, displaymatrix, green_x, green_y, inverted, max_average, max_bitrate, max_content, max_luminance, min_bitrate, min_luminance, pitch, projection, red_x, red_y, roll, rotation, service_type, type, vbv_delay, white_point_x, white_point_y, yaw)
+        return SideDataList(
+            side_data_type,
+            avg_bitrate,
+            blue_x,
+            blue_y,
+            buffer_size,
+            displaymatrix,
+            green_x,
+            green_y,
+            inverted,
+            max_average,
+            max_bitrate,
+            max_content,
+            max_luminance,
+            min_bitrate,
+            min_luminance,
+            pitch,
+            projection,
+            red_x,
+            red_y,
+            roll,
+            rotation,
+            service_type,
+            type,
+            vbv_delay,
+            white_point_x,
+            white_point_y,
+            yaw,
+        )
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -616,7 +756,7 @@ class StreamTags:
     vendor_id: Optional[str] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> 'StreamTags':
+    def from_dict(obj: Any) -> "StreamTags":
         assert isinstance(obj, dict)
         statistics_tags = from_union([from_str, from_none], obj.get("_statistics_tags"))
         statistics_tags_eng = from_union([from_str, from_none], obj.get("_statistics_tags-eng"))
@@ -647,7 +787,37 @@ class StreamTags:
         title = from_union([from_str, from_none], obj.get("title"))
         track = from_union([from_str, from_none], obj.get("track"))
         vendor_id = from_union([from_str, from_none], obj.get("vendor_id"))
-        return StreamTags(statistics_tags, statistics_tags_eng, statistics_writing_app, statistics_writing_app_eng, statistics_writing_date_utc, statistics_writing_date_utc_eng, alpha_mode, bps, bps_eng, creation_time, duration, duration_eng, encoder, encoder_options, filename, handler_name, language, mimetype, number_of_bytes, number_of_bytes_eng, number_of_frames, number_of_frames_eng, source, source_id, source_id_eng, timecode, title, track, vendor_id)
+        return StreamTags(
+            statistics_tags,
+            statistics_tags_eng,
+            statistics_writing_app,
+            statistics_writing_app_eng,
+            statistics_writing_date_utc,
+            statistics_writing_date_utc_eng,
+            alpha_mode,
+            bps,
+            bps_eng,
+            creation_time,
+            duration,
+            duration_eng,
+            encoder,
+            encoder_options,
+            filename,
+            handler_name,
+            language,
+            mimetype,
+            number_of_bytes,
+            number_of_bytes_eng,
+            number_of_frames,
+            number_of_frames_eng,
+            source,
+            source_id,
+            source_id_eng,
+            timecode,
+            title,
+            track,
+            vendor_id,
+        )
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -772,7 +942,7 @@ class Stream:
     width: Optional[int] = None
 
     @staticmethod
-    def from_dict(obj: Any) -> 'Stream':
+    def from_dict(obj: Any) -> "Stream":
         assert isinstance(obj, dict)
         avg_frame_rate = from_str(obj.get("avg_frame_rate"))
         codec_tag = from_str(obj.get("codec_tag"))
@@ -825,12 +995,72 @@ class Stream:
         sample_aspect_ratio = from_union([from_str, from_none], obj.get("sample_aspect_ratio"))
         sample_fmt = from_union([from_str, from_none], obj.get("sample_fmt"))
         sample_rate = from_union([from_str, from_none], obj.get("sample_rate"))
-        side_data_list = from_union([lambda x: from_list(SideDataList.from_dict, x), from_none], obj.get("side_data_list"))
+        side_data_list = from_union(
+            [lambda x: from_list(SideDataList.from_dict, x), from_none],
+            obj.get("side_data_list"),
+        )
         start_pts = from_union([from_int, from_none], obj.get("start_pts"))
         start_time = from_union([from_str, from_none], obj.get("start_time"))
         tags = from_union([StreamTags.from_dict, from_none], obj.get("tags"))
         width = from_union([from_int, from_none], obj.get("width"))
-        return Stream(avg_frame_rate, codec_tag, codec_tag_string, codec_type, disposition, index, r_frame_rate, time_base, bit_rate, bits_per_raw_sample, bits_per_sample, channel_layout, channels, chroma_location, closed_captions, codec_long_name, codec_name, coded_height, coded_width, color_primaries, color_range, color_space, color_transfer, display_aspect_ratio, divx_packed, dmix_mode, duration, duration_ts, extradata_size, field_order, film_grain, has_b_frames, height, id, initial_padding, is_avc, level, loro_cmixlev, loro_surmixlev, ltrt_cmixlev, ltrt_surmixlev, missing_streams, nal_length_size, nb_frames, pix_fmt, profile, quarter_sample, refs, sample_aspect_ratio, sample_fmt, sample_rate, side_data_list, start_pts, start_time, tags, width)
+        return Stream(
+            avg_frame_rate,
+            codec_tag,
+            codec_tag_string,
+            codec_type,
+            disposition,
+            index,
+            r_frame_rate,
+            time_base,
+            bit_rate,
+            bits_per_raw_sample,
+            bits_per_sample,
+            channel_layout,
+            channels,
+            chroma_location,
+            closed_captions,
+            codec_long_name,
+            codec_name,
+            coded_height,
+            coded_width,
+            color_primaries,
+            color_range,
+            color_space,
+            color_transfer,
+            display_aspect_ratio,
+            divx_packed,
+            dmix_mode,
+            duration,
+            duration_ts,
+            extradata_size,
+            field_order,
+            film_grain,
+            has_b_frames,
+            height,
+            id,
+            initial_padding,
+            is_avc,
+            level,
+            loro_cmixlev,
+            loro_surmixlev,
+            ltrt_cmixlev,
+            ltrt_surmixlev,
+            missing_streams,
+            nal_length_size,
+            nb_frames,
+            pix_fmt,
+            profile,
+            quarter_sample,
+            refs,
+            sample_aspect_ratio,
+            sample_fmt,
+            sample_rate,
+            side_data_list,
+            start_pts,
+            start_time,
+            tags,
+            width,
+        )
 
     def to_dict(self) -> dict:
         result: dict = {}
@@ -929,7 +1159,13 @@ class Stream:
         if self.sample_rate is not None:
             result["sample_rate"] = from_union([from_str, from_none], self.sample_rate)
         if self.side_data_list is not None:
-            result["side_data_list"] = from_union([lambda x: from_list(lambda x: to_class(SideDataList, x), x), from_none], self.side_data_list)
+            result["side_data_list"] = from_union(
+                [
+                    lambda x: from_list(lambda x: to_class(SideDataList, x), x),
+                    from_none,
+                ],
+                self.side_data_list,
+            )
         if self.start_pts is not None:
             result["start_pts"] = from_union([from_int, from_none], self.start_pts)
         if self.start_time is not None:
@@ -947,7 +1183,7 @@ class Ffprobe:
     streams: List[Stream]
 
     @staticmethod
-    def from_dict(obj: Any) -> 'Ffprobe':
+    def from_dict(obj: Any) -> "Ffprobe":
         assert isinstance(obj, dict)
         format = Format.from_dict(obj.get("format"))
         streams = from_list(Stream.from_dict, obj.get("streams"))

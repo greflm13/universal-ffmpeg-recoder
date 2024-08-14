@@ -47,12 +47,18 @@ def get_movie_name(file: str, token: str):
         if file.endswith(container):
             match = re.search(pattern=r"\d{4}", string=file)
             if match:
+                comment = None
+                date = None
                 year: str = match.group()
                 movie_name: str = file[: match.start()].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
                 output_file = f"{movie_name}({year}).mkv"
                 response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
                 ret = response.json()["data"][0]
-                metadata = {"comment": ret["overviews"]["eng"], "title": ret["extended_title"], "date": ret["first_air_time"]}
+                if "overviews" in ret and "eng" in ret["overviews"]:
+                    comment = ret["overviews"]["eng"]
+                if "first_air_time" in ret and ret["first_air_time"] != "":
+                    date = ret["first_air_time"]
+                metadata = {"comment": comment, "title": ret["extended_title"], "date": date}
             else:
                 output_file: str = os.path.splitext(file)[0] + ".mkv"
                 metadata = {"title": os.path.splitext(file)[0]}
@@ -130,12 +136,12 @@ def recode_all_series(folder: str, token: str):
 def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
-    if stream.codec_name != "hevc" and stream.disposition.attached_pic == 0:
+    if stream.codec_name != "hevc" and not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:v:{vindex}", "libx265"])
         vrecoding = True
         printlines.append(f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}hevc{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file")
-    elif stream.disposition.attached_pic == 0:
+    elif not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
         printlines.append(f"Copying {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file")
@@ -218,7 +224,7 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int):
         sdefault.update({"lang": stream.tags.language, "oindex": stream.index, "sindex": sindex, "type": subtitle_type})
 
 
-def recode(file: str, path: str | None = None, metadata: dict = {}, token: str | None = None):
+def recode(file: str, path: str | None = None, metadata: dict | None = None, token: str | None = None):
 
     printlines = []
 
@@ -253,7 +259,8 @@ def recode(file: str, path: str | None = None, metadata: dict = {}, token: str |
     else:
         output_file = path
 
-    if metadata is {}:
+    if metadata is None:
+        metadata = {}
         metadata["title"] = os.path.basename(os.path.splitext(output_file)[0])
 
     print(f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
@@ -306,6 +313,13 @@ def recode(file: str, path: str | None = None, metadata: dict = {}, token: str |
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
             printlines.append(f"Copying {Color.GREEN}attachment{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.filename}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}t:{tindex}{Style.RESET_ALL} in output file")
             tindex += 1
+
+    for stream in ffprobe.streams:
+        if stream.codec_type == "video" and stream.disposition.attached_pic:
+            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+            ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
+            printlines.append(f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file")
+            vindex += 1
 
     if aindex > 0 and adefault["aindex"] is not None:
         for stream in astreams:
