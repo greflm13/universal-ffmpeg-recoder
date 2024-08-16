@@ -440,8 +440,8 @@ class Format:
     @staticmethod
     def from_dict(obj: Any) -> "Format":
         assert isinstance(obj, dict)
-        bit_rate = from_str(obj.get("bit_rate"))
-        duration = from_str(obj.get("duration"))
+        bit_rate = from_union([from_str, from_none], obj.get("bit_rate"))
+        duration = from_union([from_str, from_none], obj.get("duration"))
         filename = from_str(obj.get("filename"))
         format_long_name = from_str(obj.get("format_long_name"))
         format_name = from_str(obj.get("format_name"))
@@ -467,8 +467,10 @@ class Format:
 
     def to_dict(self) -> dict:
         result: dict = {}
-        result["bit_rate"] = from_str(self.bit_rate)
-        result["duration"] = from_str(self.duration)
+        if self.bit_rate is not None:
+            result["bit_rate"] = from_str(self.bit_rate)
+        if self.duration is not None:
+            result["duration"] = from_str(self.duration)
         result["filename"] = from_str(self.filename)
         result["format_long_name"] = from_str(self.format_long_name)
         result["format_name"] = from_str(self.format_name)

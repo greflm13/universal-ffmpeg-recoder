@@ -19,7 +19,7 @@
                 "program": "${workspaceFolder}/recode.py",
                 "console": "integratedTerminal",
                 "args": [],
-                "cwd": "/mnt/nfs/films"
+                "cwd": "/mnt/nfs/series/The Expanse (2015)"
             },
             {
                 "name": "Generate Schema",
