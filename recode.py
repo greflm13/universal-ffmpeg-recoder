@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import datetime
+import tempfile
 import urllib.parse
 
 from subprocess import Popen, PIPE, STDOUT
@@ -277,7 +278,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
         metadata = {}
         metadata["title"] = os.path.basename(os.path.splitext(output_file)[0])
 
-    print(f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
+    printlines.append(f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
 
     p = Popen(
         ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", os.path.realpath(file)],
@@ -296,7 +297,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
         print(f"Error: {file} has no streams")
         return
 
-    print(f"{Color.RED}Streams{Style.RESET_ALL}:")
+    printlines.append(f"{Color.RED}Streams{Style.RESET_ALL}:")
     for stream in ffprobe.streams:
         if stream.tags is None:
             stream.tags = StreamTags.from_dict({"title": None, "language": None})
@@ -305,9 +306,13 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
         else:
             disposition = "none"
         if stream.codec_type != "attachment":
-            print(f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}")
+            printlines.append(
+                f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
+            )
         elif stream.codec_type == "attachment":
-            print(f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.filename} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}")
+            printlines.append(
+                f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.filename} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
+            )
 
     for stream in ffprobe.streams:
         if stream.codec_type == "video":
@@ -373,18 +378,25 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
             ffmpeg_metadata.extend(["-metadata", f"{tag}={metadata[tag].strip()}"])
             changemetadata = True
 
+    if not vrecoding and not arecoding and not changedefault and not changemetadata and os.path.realpath(file) == os.path.realpath(output_file):
+        print(f"{Color.RED}No changes to make: {Color.GREEN}{file} {Color.BLUE}Continuing...{Style.RESET_ALL}")
+        return
+    if os.path.realpath(file) != os.path.realpath(output_file) and not vrecoding and not arecoding and not changedefault and not changemetadata:
+        print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}{file}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
+        shutil.move(os.path.realpath(file), os.path.realpath(output_file))
+        return
+
+    fd, tmpfile = tempfile.mkstemp(suffix=".mkv")
+
     ffmpeg_command.extend(ffmpeg_mapping)
     ffmpeg_command.extend(ffmpeg_recoding)
     if vrecoding:
         ffmpeg_command.extend(["-crf", "23", "-preset", "veryslow"])
     if arecoding:
         ffmpeg_command.extend(["-b:a", "192k", "-ar", "48000"])
-    if not vrecoding and not arecoding and not changedefault and not changemetadata and os.path.realpath(file) == os.path.realpath(output_file):
-        print(f"{Color.RED}No changes to make! Continuing...{Style.RESET_ALL}")
-        return
     ffmpeg_command.extend(ffmpeg_dispositions)
     ffmpeg_command.extend(ffmpeg_metadata)
-    ffmpeg_command.extend(["-f", "matroska", "-y", "/tmp/" + os.path.basename(output_file)])
+    ffmpeg_command.extend(["-f", "matroska", "-y", tmpfile])
     for line in printlines:
         print(line)
     # print(" ".join(ffmpeg_command))
@@ -406,8 +418,8 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     shutil.move(os.path.realpath(file), os.path.realpath(file) + ".old")
 
     # Move tempfile to output_file
-    print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}tempfile{Style.RESET_ALL} file to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
-    shutil.move("/tmp/" + os.path.basename(output_file), os.path.realpath(output_file))
+    print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}tempfile{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
+    shutil.move(tmpfile, os.path.realpath(output_file))
     print(f"{Color.GREEN}Done!{Style.RESET_ALL}")
 
 
