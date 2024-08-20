@@ -399,7 +399,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     ffmpeg_command.extend(ffmpeg_recoding)
     if vrecoding:
         if AMF:
-            ffmpeg_command.extend(["-rc", "cqp", "-qp_i", "23", "-qp_p", "24", "-quality", "quality", "-pixel_format", "yuv420p"])
+            ffmpeg_command.extend(["-rc", "cqp", "-qp_i", "23", "-qp_p", "23", "-quality", "quality", "-pixel_format", "yuv420p"])
         else:
             ffmpeg_command.extend(["-crf", "23", "-preset", "veryslow"])
     if arecoding:
@@ -409,7 +409,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     ffmpeg_command.extend(["-f", "matroska", "-y", tmpfile])
     for line in printlines:
         print(line)
-    print(" ".join(ffmpeg_command))
+    # print(" ".join(ffmpeg_command))
 
     timestart = datetime.datetime.now()
     print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
