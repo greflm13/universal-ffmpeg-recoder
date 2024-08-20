@@ -31,6 +31,10 @@ VIDEO_CONTAINERS = [
 
 AUDIO_PRIORITY = {"dts": 4, "truehd": 3, "eac3": 2, "ac3": 1}
 SUBTITLE_PRIORITY = {"full": 3, "sdh": 2, "none": 1}
+if os.path.exists("/usr/lib/libamfrt64.so"):
+    AMF = True
+else:
+    AMF = False
 
 
 def rename_keys_to_lower(iterable):
@@ -139,9 +143,12 @@ def recode_all_series(folder: str, token: str):
 def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
-    if stream.codec_name != "hevc" and not stream.disposition.attached_pic:
+    if stream.codec_name != "hevc" or stream.pix_fmt != "yuv420p" and not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-        ffmpeg_recoding.extend([f"-c:v:{vindex}", "libx265"])
+        if AMF:
+            ffmpeg_recoding.extend([f"-c:v:{vindex}", "hevc_amf"])
+        else:
+            ffmpeg_recoding.extend([f"-c:v:{vindex}", "libx265"])
         vrecoding = True
         printlines.append(
             f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}hevc{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
@@ -391,7 +398,10 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     ffmpeg_command.extend(ffmpeg_mapping)
     ffmpeg_command.extend(ffmpeg_recoding)
     if vrecoding:
-        ffmpeg_command.extend(["-crf", "23", "-preset", "veryslow"])
+        if AMF:
+            ffmpeg_command.extend(["-rc", "cqp", "-qp_i", "23", "-qp_p", "24", "-quality", "quality", "-pixel_format", "yuv420p"])
+        else:
+            ffmpeg_command.extend(["-crf", "23", "-preset", "veryslow"])
     if arecoding:
         ffmpeg_command.extend(["-b:a", "192k", "-ar", "48000"])
     ffmpeg_command.extend(ffmpeg_dispositions)
@@ -399,7 +409,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     ffmpeg_command.extend(["-f", "matroska", "-y", tmpfile])
     for line in printlines:
         print(line)
-    # print(" ".join(ffmpeg_command))
+    print(" ".join(ffmpeg_command))
 
     timestart = datetime.datetime.now()
     print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
