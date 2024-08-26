@@ -60,12 +60,15 @@ def get_movie_name(file: str, token: str):
                 movie_name: str = file[: match.start()].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
                 output_file = f"{movie_name}({year}).mkv"
                 response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
-                ret = response.json()["data"][0]
-                if "overviews" in ret and "eng" in ret["overviews"]:
-                    comment = ret["overviews"]["eng"]
-                if "first_air_time" in ret and ret["first_air_time"] != "":
-                    date = ret["first_air_time"]
-                metadata = {"comment": comment, "title": ret["extended_title"], "date": date}
+                try:
+                    ret = response.json()["data"][0]
+                    if "overviews" in ret and "eng" in ret["overviews"]:
+                        comment = ret["overviews"]["eng"]
+                    if "first_air_time" in ret and ret["first_air_time"] != "":
+                        date = ret["first_air_time"]
+                    metadata = {"comment": comment, "title": ret["extended_title"], "date": date}
+                except IndexError:
+                    metadata = {"title": f"{movie_name}({year})"}
             else:
                 output_file: str = os.path.splitext(file)[0] + ".mkv"
                 metadata = {"title": os.path.splitext(file)[0]}
