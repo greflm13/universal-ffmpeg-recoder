@@ -106,7 +106,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
                     for epi in seriesobj:
                         if epi["seasonNumber"] == int(match.groups()[0]) and epi["number"] == int(episode):
                             titles.append(epi["name"])
-                            comments.append(epi["overview"])
+                            comments.append(epi["overview"].replace("\n", "").strip())
                             date = epi["aired"]
                 if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
                     title = re.sub(r"\(\d+\)", "", titles[0]).strip()
