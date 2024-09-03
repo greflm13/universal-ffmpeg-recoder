@@ -106,7 +106,8 @@ def get_series_name(series: str, file: str, seriesobj: list):
                     for epi in seriesobj:
                         if epi["seasonNumber"] == int(match.groups()[0]) and epi["number"] == int(episode):
                             titles.append(epi["name"])
-                            comments.append(epi["overview"].replace("\n", "").strip())
+                            if isinstance(epi["overview"], str):
+                                comments.append(epi["overview"].replace("\n", "").strip())
                             date = epi["aired"]
                 if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
                     title = re.sub(r"\(\d+\)", "", titles[0]).strip()
@@ -380,7 +381,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
         format_tags = ffprobe.format.tags.to_dict()
     except AttributeError:
         format_tags = {}
-    
+
     for tag in metadata.keys():
         if metadata[tag] != "" and metadata[tag] is not None:
             if tag in format_tags and metadata[tag].strip() == format_tags[tag]:
