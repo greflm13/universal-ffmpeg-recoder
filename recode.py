@@ -17,7 +17,7 @@ from colorama import init as colorama_init
 from colorama import Fore as Color
 from colorama import Style
 
-from ffprobe import Ffprobe, Stream, StreamTags
+from ffprobe import Ffprobe, Stream, StreamTags, FormatTags
 
 colorama_init()
 
@@ -376,7 +376,11 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
                 printlines.append(f"Setting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}s:{sdefault['sindex']}{Style.RESET_ALL} to default")
                 changedefault = True
 
-    format_tags = ffprobe.format.tags.to_dict()
+    try:
+        format_tags = ffprobe.format.tags.to_dict()
+    except AttributeError:
+        format_tags = {}
+    
     for tag in metadata.keys():
         if metadata[tag] != "" and metadata[tag] is not None:
             if tag in format_tags and metadata[tag].strip() == format_tags[tag]:
