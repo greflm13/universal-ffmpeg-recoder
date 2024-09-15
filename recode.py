@@ -105,7 +105,10 @@ def get_series_name(series: str, file: str, seriesobj: list):
                     ep = ep + "E" + episode.rjust(2, "0")
                     for epi in seriesobj:
                         if epi["seasonNumber"] == int(match.groups()[0]) and epi["number"] == int(episode):
-                            titles.append(epi["name"])
+                            if isinstance(epi["name"], str):
+                                titles.append(epi["name"])
+                            else:
+                                titles.append("")
                             if isinstance(epi["overview"], str):
                                 comments.append(epi["overview"].replace("\n", "").strip())
                             date = epi["aired"]
@@ -298,9 +301,9 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     )
     out, err = p.communicate()
     output = json.loads(out.decode("utf-8"))
-    ffprobdict = rename_keys_to_lower(output)
+    ffprobedict = rename_keys_to_lower(output)
     try:
-        ffprobe = Ffprobe.from_dict(ffprobdict)
+        ffprobe = Ffprobe.from_dict(ffprobedict)
     except Exception as err:
         print(f"Error: {err}")
         raise RuntimeError from err
