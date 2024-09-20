@@ -19,7 +19,7 @@
                 "program": "${workspaceFolder}/recode.py",
                 "console": "integratedTerminal",
                 "args": [],
-                "cwd": "/mnt/nfs/series"
+                "cwd": "/mnt/nfs/films"
             },
             {
                 "name": "Generate Schema",

@@ -279,7 +279,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     changedefault = False
     changemetadata = False
 
-    ffmpeg_command.extend(["ffmpeg", "-v", "quiet", "-stats", "-hwaccel", "auto", "-i", os.path.realpath(file)])
+    ffmpeg_command.extend(["ffmpeg", "-v", "error", "-stats", "-hwaccel", "auto", "-strict", "-2", "-i", os.path.realpath(file)])
 
     if path is None:
         output_file, metadata = get_movie_name(file, token)
@@ -295,7 +295,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     printlines.append(f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
 
     p = Popen(
-        ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", os.path.realpath(file)],
+        ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", os.path.realpath(file), "-strict", "-2"],
         stdout=PIPE,
         stderr=PIPE,
     )
@@ -304,9 +304,9 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     ffprobedict = rename_keys_to_lower(output)
     try:
         ffprobe = Ffprobe.from_dict(ffprobedict)
-    except Exception as err:
-        print(f"Error: {err}")
-        raise RuntimeError from err
+    except Exception as e:
+        print(f"Error: {err} {e}")
+        raise RuntimeError from e
     if ffprobe.streams is None:
         print(f"Error: {file} has no streams")
         return
