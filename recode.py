@@ -17,7 +17,7 @@ from colorama import init as colorama_init
 from colorama import Fore as Color
 from colorama import Style
 
-from ffprobe import Ffprobe, Stream, StreamTags, FormatTags
+from ffprobe import Ffprobe, Stream, StreamTags
 
 colorama_init()
 
@@ -305,7 +305,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     try:
         ffprobe = Ffprobe.from_dict(ffprobedict)
     except Exception as e:
-        print(f"Error: {err} {e}")
+        print(f"Error: {err.decode("utf-8")} {e}")
         raise RuntimeError from e
     if ffprobe.streams is None:
         print(f"Error: {file} has no streams")
@@ -329,7 +329,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
             )
 
     for stream in ffprobe.streams:
-        if stream.codec_type == "video":
+        if stream.codec_type == "video" and not stream.disposition.attached_pic:
             vrecoding, vindex = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines)
 
     for stream in ffprobe.streams:
@@ -358,6 +358,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
         if stream.codec_type == "video" and stream.disposition.attached_pic:
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
+            ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
             printlines.append(
                 f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
             )
@@ -440,7 +441,11 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
 
     # Move tempfile to output_file
     print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}tempfile{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
-    shutil.move(tmpfile, os.path.realpath(output_file))
+    try:
+        shutil.move(tmpfile, os.path.realpath(output_file))
+    finally:
+        if os.path.exists(tmpfile):
+            os.remove(tmpfile)
     print(f"{Color.GREEN}Done!{Style.RESET_ALL}")
 
 
