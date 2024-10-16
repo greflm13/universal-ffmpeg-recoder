@@ -354,15 +354,15 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
             )
             tindex += 1
 
-    for stream in ffprobe.streams:
-        if stream.codec_type == "video" and stream.disposition.attached_pic:
-            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
-            ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
-            printlines.append(
-                f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
-            )
-            vindex += 1
+    # for stream in ffprobe.streams:
+    #     if stream.codec_type == "video" and stream.disposition.attached_pic:
+    #         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+    #         ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
+    #         ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
+    #         printlines.append(
+    #             f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
+    #         )
+    #         vindex += 1
 
     if aindex > 0 and adefault["aindex"] is not None:
         for stream in astreams:
