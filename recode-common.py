@@ -58,7 +58,7 @@ def get_movie_name(file: str, token: str):
                 date = None
                 year: str = match.group()
                 movie_name: str = file[: match.start()].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
-                output_file = f"{movie_name}({year}).mkv"
+                output_file = f"{movie_name}({year}).mp4"
                 response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
                 try:
                     ret = response.json()["data"][0]
@@ -70,7 +70,7 @@ def get_movie_name(file: str, token: str):
                 except IndexError:
                     metadata = {"title": f"{movie_name}({year})"}
             else:
-                output_file: str = os.path.splitext(file)[0] + ".mkv"
+                output_file: str = os.path.splitext(file)[0] + ".mp4"
                 metadata = {"title": os.path.splitext(file)[0]}
             return output_file, metadata
     return None, None
@@ -117,15 +117,15 @@ def get_series_name(series: str, file: str, seriesobj: list):
                 else:
                     title = " + ".join(titles)
                 if title != "":
-                    name = f"{series} - S{seasonnum.rjust(2, '0')}{ep} - {title}.mkv"
+                    name = f"{series} - S{seasonnum.rjust(2, '0')}{ep} - {title}.mp4"
                 else:
-                    name = f"{series} - S{seasonnum.rjust(2, '0')}{ep}.mkv"
+                    name = f"{series} - S{seasonnum.rjust(2, '0')}{ep}.mp4"
                 season = f"Season {seasonnum.rjust(2, '0')}"
                 try:
                     comment = " ".join(comments)
                 except TypeError:
                     comment = None
-                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": comment, "title": name.removesuffix(".mkv"), "date": date}
+                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": comment, "title": name.removesuffix(".mp4"), "date": date}
                 return season, name, metadata
     return None, None, None
 
@@ -150,15 +150,15 @@ def recode_all_series(folder: str, token: str):
 def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
-    if stream.codec_name != "hevc" or stream.pix_fmt != "yuv420p" and not stream.disposition.attached_pic:
+    if stream.codec_name != "h264" or stream.pix_fmt != "yuv420p" and not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         if AMF:
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", "hevc_amf"])
+            ffmpeg_recoding.extend([f"-c:v:{vindex}", "h264_amf"])
         else:
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", "libx265"])
+            ffmpeg_recoding.extend([f"-c:v:{vindex}", "libx264"])
         vrecoding = True
         printlines.append(
-            f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}hevc{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
+            f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}h264{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
         )
     elif not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
@@ -171,7 +171,7 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
 
 
 def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list):
-    if stream.codec_name in ["ac3", "eac3", "truehd", "dts"]:
+    if stream.codec_name in ["aac"]:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
         printlines.append(
@@ -179,18 +179,18 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
         )
     else:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-        ffmpeg_recoding.extend([f"-c:a:{aindex}", "ac3"])
+        ffmpeg_recoding.extend([f"-c:a:{aindex}", "aac"])
         arecoding = True
-        stream.codec_name = "ac3"
+        stream.codec_name = "aac"
         printlines.append(
-            f"Converting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}ac3{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
+            f"Converting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}aac{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
         )
     obj = stream.to_dict()
     obj["newindex"] = aindex
     astreams.append(obj)
 
-    if stream.tags.language in ["eng", "und", "jpn", None]:
-        update_audio_default(adefault, stream, aindex)
+    # if stream.tags.language in ["eng", "und", "jpn", None]:
+    #     update_audio_default(adefault, stream, aindex)
     return arecoding
 
 
@@ -354,15 +354,15 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
             )
             tindex += 1
 
-    for stream in ffprobe.streams:
-        if stream.codec_type == "video" and stream.disposition.attached_pic:
-            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
-            ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
-            printlines.append(
-                f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
-            )
-            vindex += 1
+    # for stream in ffprobe.streams:
+    #     if stream.codec_type == "video" and stream.disposition.attached_pic:
+    #         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+    #         ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
+    #         ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
+    #         printlines.append(
+    #             f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
+    #         )
+    #         vindex += 1
 
     if aindex > 0 and adefault["aindex"] is not None:
         for stream in astreams:
@@ -400,12 +400,12 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     if not vrecoding and not arecoding and not changedefault and not changemetadata and os.path.realpath(file) == os.path.realpath(output_file):
         print(f"{Color.RED}No changes to make: {Color.GREEN}{file} {Color.BLUE}Continuing...{Style.RESET_ALL}")
         return
-    if os.path.realpath(file) != os.path.realpath(output_file) and not vrecoding and not arecoding and not changedefault and not changemetadata:
+    if os.path.realpath(file) != os.path.realpath(output_file) and not vrecoding and not arecoding and not changedefault and not changemetadata and os.path.splitext(file)[1] == os.path.splitext(output_file)[1]:
         print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}{file}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
         shutil.move(os.path.realpath(file), os.path.realpath(output_file))
         return
 
-    fd, tmpfile = tempfile.mkstemp(suffix=".mkv")
+    fd, tmpfile = tempfile.mkstemp(suffix=".mp4")
 
     ffmpeg_command.extend(ffmpeg_mapping)
     ffmpeg_command.extend(ffmpeg_recoding)
@@ -421,27 +421,27 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     ffmpeg_command.extend(["-f", "matroska", "-y", tmpfile])
     for line in printlines:
         print(line)
-    # print(" ".join(ffmpeg_command))
+    print(" ".join(ffmpeg_command))
 
-    timestart = datetime.datetime.now()
-    print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
-
-    # Run ffmpeg_command and print live output
-    with Popen(ffmpeg_command, stdout=PIPE, stderr=STDOUT) as process:
-        for c in iter(lambda: process.stdout.read(1), b""):
-            sys.stdout.buffer.write(c)
-            sys.stdout.flush()
-        process.wait()
-    timestop = datetime.datetime.now()
-    print(f"Recoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
-    print(f"Recoding took {Color.GREEN}{timestop - timestart}{Style.RESET_ALL}")
-
-    # Rename old file
-    shutil.move(os.path.realpath(file), os.path.realpath(file) + ".old")
-
-    # Move tempfile to output_file
-    print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}tempfile{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
     try:
+        timestart = datetime.datetime.now()
+        print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
+
+        # Run ffmpeg_command and print live output
+        with Popen(ffmpeg_command, stdout=PIPE, stderr=STDOUT) as process:
+            for c in iter(lambda: process.stdout.read(1), b""):
+                sys.stdout.buffer.write(c)
+                sys.stdout.flush()
+            process.wait()
+        timestop = datetime.datetime.now()
+        print(f"Recoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
+        print(f"Recoding took {Color.GREEN}{timestop - timestart}{Style.RESET_ALL}")
+
+        # Rename old file
+        # shutil.move(os.path.realpath(file), os.path.realpath(file) + ".old")
+
+        # Move tempfile to output_file
+        print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}tempfile{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
         shutil.move(tmpfile, os.path.realpath(output_file))
         os.chmod(output_file, 0o644)
     finally:
