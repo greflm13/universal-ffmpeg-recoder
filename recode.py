@@ -20,6 +20,7 @@ from colorama import Style
 from rich_argparse import RichHelpFormatter
 
 from ffprobe import Ffprobe, Stream, StreamTags
+from FileOperations import File
 
 colorama_init()
 
@@ -141,7 +142,14 @@ def get_series_name(series: str, file: str, seriesobj: list):
                     comment = " ".join(comments)
                 except TypeError:
                     comment = None
-                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": comment, "title": title, "date": date}
+                metadata = {
+                    "episode_id": ", ".join(epi.removeprefix("0") for epi in episodes),
+                    "season_number": seasonnum.removeprefix("0"),
+                    "show": series,
+                    "comment": comment,
+                    "title": title,
+                    "date": date,
+                }
                 return season, name, metadata
     return None, None, None
 
@@ -158,7 +166,13 @@ def recode_series(folder: str, apitokens: dict, lang: str):
                 if name is not None:
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
                         os.makedirs(os.path.join(parentfolder, series, season))
-                    recode(file=os.path.join(parentfolder, series, season, file), path=os.path.join(parentfolder, series, season, name), metadata=metadata, lang=lang, apitokens=apitokens)
+                    recode(
+                        file=os.path.join(parentfolder, series, season, file),
+                        path=os.path.join(parentfolder, series, season, name),
+                        metadata=metadata,
+                        lang=lang,
+                        apitokens=apitokens,
+                    )
         else:
             season, name, metadata = get_series_name(series, dire, seriesobj)
             if name is not None:
@@ -236,21 +250,21 @@ def audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding
     return arecoding, aindex
 
 
-def subtitles(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, sindex: int, sdefault: dict, sstreams: list, printlines: list):
+def subtitles(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, sindex: int, sdefault: dict, sstreams: list, printlines: list, file=0):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
     if stream.tags.language in ["eng", "ger", "deu", "und", None]:
         if stream.codec_name in ["subrip", "hdmv_pgs_subtitle", "ass", "dvd_subtitle"]:
-            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+            ffmpeg_mapping.extend(["-map", f"{file}:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:s:{sindex}", "copy"])
             printlines.append(
-                f"Copying {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file"
+                f"Copying {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}{file}:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file"
             )
         else:
-            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+            ffmpeg_mapping.extend(["-map", f"{file}:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:s:{sindex}", "srt"])
             printlines.append(
-                f"Converting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}srt{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file"
+                f"Converting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}{file}:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}srt{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file"
             )
             stream.codec_name = "srt"
         obj = stream.to_dict()
@@ -273,32 +287,34 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int):
         sdefault.update({"lang": stream.tags.language, "oindex": stream.index, "sindex": sindex, "type": subtitle_type})
 
 
-def get_subtitles_from_ost(token: str, metadata: dict, lang: str):
-    if lang == "deu":
-        lang = "eng"
-    searchstring = f"https://api.opensubtitles.com/api/v1/subtitles?languages={lang}"
+def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
+    headers = {"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token["token"]}"}
     if metadata.get("show", False):
-        match = re.findall(r"([\w\s]+)\s\((\d{4})\)",metadata["show"])[0]
-        name = match[0]
-        year = match[1]
-        searchstring += f"&query={urllib.parse.quote(name)}&year={year}"
+        match = re.findall(r"([\w\s]+)\s\((\d{4})\)", metadata["show"])[0]
+        name = f"{match[0]} ({match[1]}) - {metadata["title"]}"
     else:
-        searchstring += f"&query={urllib.parse.quote(metadata["title"])}"
-    if metadata.get("episode_id", False):
-        searchstring += f"&episode_number={metadata["episode_id"]}"
-    if metadata.get("season_number", False):
-        searchstring += f"&season_number={metadata["season_number"]}"
+        name = metadata["title"]
+    response = requests.get(f"https://api.opensubtitles.com/api/v1/utilities/guessit?filename={name}", headers=headers)
+    params = response.json()
+    params["language"] = lang[:2]
+    params["page"] = 0
+    params["moviehash"] = File(file).get_hash()
+    params["order_by"] = "ratings"
 
-    response = requests.get(
-        searchstring,
-        headers={"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token["token"]}"},
-    )
-    subtitle = response.json()
-    print(subtitle)
+    response = requests.get("https://api.opensubtitles.com/api/v1/subtitles", params=urllib.parse.urlencode(params), headers=headers)
+    subtitle = response.json()["data"][0]["attributes"]
+    response = requests.post("https://api.opensubtitles.com/api/v1/download", headers=headers, json={"file_id": subtitle["files"][0]["file_id"]})
+    link = response.json()["link"]
+    filename = response.json()["file_name"]
+    response = requests.get(link, headers=headers)
+    content = response.content
+    fd, tmpfile = tempfile.mkstemp(suffix=os.path.splitext(filename)[1])
+    with open(tmpfile, "wb") as f:
+        f.write(content)
+    return tmpfile
 
 
 def recode(file: str, lang: str, path: str | None = None, metadata: dict | None = None, apitokens: dict | None = None):
-
     printlines = []
 
     adefault = {"aindex": None, "codec": None, "lang": None, "channels": None}
@@ -327,6 +343,8 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
     arecoding = False
     changedefault = False
     changemetadata = False
+
+    subfile = ""
 
     ffmpeg_command.extend(["ffmpeg", "-v", "error", "-stats", "-hwaccel", "auto", "-strict", "-2", "-i", os.path.realpath(file)])
 
@@ -372,17 +390,16 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
             printlines.append(
                 f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
             )
+            if stream.codec_type == "video" and not stream.disposition.attached_pic:
+                videostreams.append(stream)
+            elif stream.codec_type == "audio":
+                audiostreams.append(stream)
+            elif stream.codec_type == "subtitle":
+                subtitlestreams.append(stream)
         elif stream.codec_type == "attachment":
             printlines.append(
                 f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.filename} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
             )
-        if stream.codec_type == "video" and not stream.disposition.attached_pic:
-            videostreams.append(stream)
-        elif stream.codec_type == "audio":
-            audiostreams.append(stream)
-        elif stream.codec_type == "subtitle":
-            subtitlestreams.append(stream)
-        elif stream.codec_type == "attachement":
             attachmentstreams.append(stream)
 
     for stream in videostreams:
@@ -400,15 +417,34 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines)
 
     if sindex == 0:
-        get_subtitles_from_ost(token=apitokens["opensub"], metadata=metadata, lang=lang)
-
-    for stream in ffprobe.streams:
-        if stream.codec_type == "attachment":
-            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-            printlines.append(
-                f"Copying {Color.GREEN}attachment{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.filename}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}t:{tindex}{Style.RESET_ALL} in output file"
+        try:
+            subfile = get_subtitles_from_ost(token=apitokens["opensub"], metadata=metadata, lang=lang, file=file)
+            p = Popen(
+                ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", subfile, "-strict", "-2"],
+                stdout=PIPE,
+                stderr=PIPE,
             )
-            tindex += 1
+            out, err = p.communicate()
+            output = json.loads(out.decode("utf-8"))
+            ffprobedict = rename_keys_to_lower(output)
+            try:
+                sub = Ffprobe.from_dict(ffprobedict)
+            except Exception:
+                ...
+            ffmpeg_command.extend(["-i", subfile])
+            for stream in sub.streams:
+                if stream.tags is None:
+                    stream.tags = StreamTags.from_dict({"title": None, "language": lang})
+                sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, file=1)
+        except Exception:
+            ...
+
+    for stream in attachmentstreams:
+        ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+        printlines.append(
+            f"Copying {Color.GREEN}attachment{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.filename}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}t:{tindex}{Style.RESET_ALL} in output file"
+        )
+        tindex += 1
 
     for stream in ffprobe.streams:
         if stream.codec_type == "video" and stream.disposition.attached_pic:
@@ -483,26 +519,30 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
     print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
 
     # Run ffmpeg_command and print live output
-    with Popen(ffmpeg_command, stdout=PIPE, stderr=STDOUT) as process:
-        for c in iter(lambda: process.stdout.read(1), b""):
-            sys.stdout.buffer.write(c)
-            sys.stdout.flush()
-        process.wait()
-    timestop = datetime.datetime.now()
-    print(f"Recoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
-    print(f"Recoding took {Color.GREEN}{timestop - timestart}{Style.RESET_ALL}")
-
-    # Rename old file
-    shutil.move(os.path.realpath(file), os.path.realpath(file) + ".old")
-
-    # Move tempfile to output_file
-    print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}tempfile{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
     try:
-        shutil.move(tmpfile, os.path.realpath(output_file))
-        os.chmod(output_file, 0o644)
+        with Popen(ffmpeg_command, stdout=PIPE, stderr=STDOUT) as process:
+            for c in iter(lambda: process.stdout.read(1), b""):
+                sys.stdout.buffer.write(c)
+                sys.stdout.flush()
+            process.wait()
+        timestop = datetime.datetime.now()
+        print(f"Recoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
+        print(f"Recoding took {Color.GREEN}{timestop - timestart}{Style.RESET_ALL}")
+
+        # Rename old file
+        shutil.move(os.path.realpath(file), os.path.realpath(file) + ".old")
+
+        # Move tempfile to output_file
+        print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}tempfile{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
+        try:
+            shutil.move(tmpfile, os.path.realpath(output_file))
+            os.chmod(output_file, 0o644)
+        finally:
+            if os.path.exists(tmpfile):
+                os.remove(tmpfile)
     finally:
-        if os.path.exists(tmpfile):
-            os.remove(tmpfile)
+        if os.path.exists(subfile):
+            os.remove(subfile)
     print(f"{Color.GREEN}Done!{Style.RESET_ALL}")
 
 
@@ -514,21 +554,36 @@ def api_login() -> str:
     thetvdbtoken = response.json()["data"]["token"]
 
     with open(os.path.join(os.path.dirname(__file__), "opensubtitles"), "r", encoding="utf-8") as f:
-        apikey = f.read()
+        cred = json.loads(f.read())
         f.close()
     response = requests.post(
-        "https://api.opensubtitles.com/api/v1/login", json={"username": "sorogon", "password": "fB!Fm^6*%6YL42g2"}, timeout=10, headers={"Content-Type": "application/json", "Api-Key": apikey, "User-Agent": "recoder v1.0.0"}
+        "https://api.opensubtitles.com/api/v1/login",
+        json={"username": cred["username"], "password": cred["password"]},
+        timeout=10,
+        headers={"Content-Type": "application/json", "Api-Key": cred["api_key"], "User-Agent": "recoder v1.0.0"},
     )
     opensubtitlestoken = response.json()["token"]
     tokens = {"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": apikey}}
     return tokens
 
 
+def logout(token):
+    requests.delete("https://api.opensubtitles.com/api/v1/logout", headers={"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token["token"]}"})
+
+
 def main():
     apitokens = api_login()
 
     parser = argparse.ArgumentParser(description="Recode media to common format", formatter_class=RichHelpFormatter)
-    parser.add_argument("-l", "--lang", help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language", choices=["eng", "deu"], default="eng", dest="lang", metavar="LANG")
+    parser.add_argument(
+        "-l",
+        "--lang",
+        help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language",
+        choices=["eng", "deu"],
+        default="eng",
+        dest="lang",
+        metavar="LANG",
+    )
     parser.add_argument("-i", "--input", help="File to recode", type=str, required=False, dest="inputfile", metavar="FILE")
     parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIRECTORY")
     parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename"], required=True, dest="contentype", metavar="TYPE")
@@ -576,6 +631,7 @@ def main():
                                 os.mkdir(os.path.join(folder, season))
                             print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                             shutil.move(old, new)
+    logout(apitokens["opensub"])
 
 
 if __name__ == "__main__":

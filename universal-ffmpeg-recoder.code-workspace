@@ -18,8 +18,8 @@
                 "request": "launch",
                 "program": "${workspaceFolder}/recode.py",
                 "console": "integratedTerminal",
-                "args": [],
-                "cwd": "/mnt/nfs/films"
+                "args": ["-t", "series", "-l", "eng"],
+                "cwd": "/home/user/Videos/Rick.and.Morty.S01.1080p.BluRay.x265-RARBG"
             },
             {
                 "name": "Generate Schema",
@@ -32,5 +32,9 @@
             }
         ],
         "compounds": []
-    }
+    },
+    "extensions": {"recommendations": [
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+    ]}
 }
