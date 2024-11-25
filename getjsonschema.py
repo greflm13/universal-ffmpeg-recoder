@@ -16,7 +16,7 @@ class CustomDateTime(TypedSchemaStrategy):
     """
 
     JS_TYPE = "string"
-    PYTHON_TYPE = (str, type(""))
+    PYTHON_TYPE = (str, str)
 
     # create a new instance variable
     def __init__(self, node_class):
@@ -83,13 +83,14 @@ def generate_filelist(searchpath):
         filelist = out.decode("utf-8").split("\n")
     return filelist
 
+
 def renameKeysToLower(iterable):
-    if type(iterable) is dict:
+    if isinstance(iterable, dict):
         for key in list(iterable.keys()):
             iterable[key.lower()] = iterable.pop(key)
-            if type(iterable[key.lower()]) is dict or type(iterable[key.lower()]) is list:
+            if isinstance(iterable[key.lower()], dict) or isinstance(iterable[key.lower()], list):
                 iterable[key.lower()] = renameKeysToLower(iterable[key.lower()])
-    elif type(iterable) is list:
+    elif isinstance(iterable, list):
         for item in iterable:
             item = renameKeysToLower(item)
     return iterable
@@ -105,7 +106,7 @@ def existing_json(json_path):
     print("Writing JSON schema...")
     with open("schema.json", "w", encoding="utf-8") as f:
         f.write(builder.to_json(indent=2))
-    exit()
+    sys.exit()
 
 
 def main():

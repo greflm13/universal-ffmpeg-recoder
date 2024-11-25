@@ -7,6 +7,7 @@ import re
 import shutil
 import datetime
 import tempfile
+import argparse
 import urllib.parse
 
 from subprocess import Popen, PIPE, STDOUT
@@ -16,6 +17,7 @@ import requests
 from colorama import init as colorama_init
 from colorama import Fore as Color
 from colorama import Style
+from rich_argparse import RichHelpFormatter
 
 from ffprobe import Ffprobe, Stream, StreamTags
 
@@ -49,7 +51,7 @@ def rename_keys_to_lower(iterable):
     return iterable
 
 
-def get_movie_name(file: str, token: str):
+def get_movie_name(file: str, token: str, lang: str):
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
             match = re.search(pattern=r"\d{4}", string=file)
@@ -59,10 +61,14 @@ def get_movie_name(file: str, token: str):
                 year: str = match.group()
                 movie_name: str = file[: match.start()].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
                 output_file = f"{movie_name}({year}).mkv"
-                response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+                response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}&language={lang}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+                if response.status_code != 200:
+                    response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
                 try:
                     ret = response.json()["data"][0]
-                    if "overviews" in ret and "eng" in ret["overviews"]:
+                    if "overviews" in ret and lang in ret["overviews"]:
+                        comment = ret["overviews"][lang]
+                    elif "overviews" in ret and "eng" in ret["overviews"]:
                         comment = ret["overviews"]["eng"]
                     if "first_air_time" in ret and ret["first_air_time"] != "":
                         date = ret["first_air_time"]
@@ -76,17 +82,26 @@ def get_movie_name(file: str, token: str):
     return None, None
 
 
-def get_series_from_tvdb(series: str, token: str) -> list:
-    seriesyear = re.search(r"(\(\d{4}\))", series).groups()[0]
-    queryseries = urllib.parse.quote(series.removesuffix(seriesyear).strip())
-    response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear.replace('(', '').replace(')', '')}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+def get_series_from_tvdb(series: str, token: str, lang: str) -> list:
+    match = re.search(r"\((\d{4})\)", series)
+    try:
+        seriesyear = match.groups()[0]
+        queryseries = urllib.parse.quote(series.removesuffix(f"({seriesyear})").strip())
+    except AttributeError:
+        seriesyear = ""
+        queryseries = urllib.parse.quote(re.search(r"[A-Za-z._-]+", series)[0].replace(".", " ").replace("-", " ").replace("_", " ").upper().removesuffix("S").strip())
+    response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}&language={lang}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+    if response.status_code != 200:
+        response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers={"Authorization": f"Bearer {token}"})
     seriesid = response.json()["data"][0]["id"].removeprefix("series-")
-    response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/default/eng?page=0", timeout=10, headers={"Authorization": f"Bearer {token}"})
+    response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/default/{lang}?page=0", timeout=10, headers={"Authorization": f"Bearer {token}"})
     returnlst: list = response.json()["data"]["episodes"]
+    name = response.json()["data"]["name"]
+    year = response.json()["data"]["year"]
     while response.json()["links"]["next"] is not None:
         response = requests.get(response.json()["links"]["next"], timeout=10, headers={"Authorization": f"Bearer {token}"})
         returnlst.extend(response.json()["data"]["episodes"])
-    return returnlst
+    return returnlst, name, year
 
 
 def get_series_name(series: str, file: str, seriesobj: list):
@@ -99,7 +114,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
                 episodes.remove("")
                 ep = ""
                 titles: list[str] = []
-                comments: list[str] = [""]
+                comments: list[str] = []
                 date = None
                 for episode in episodes:
                     ep = ep + "E" + episode.rjust(2, "0")
@@ -112,6 +127,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
                             if isinstance(epi["overview"], str):
                                 comments.append(epi["overview"].replace("\n", "").strip())
                             date = epi["aired"]
+                            break
                 if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
                     title = re.sub(r"\(\d+\)", "", titles[0]).strip()
                 else:
@@ -125,32 +141,36 @@ def get_series_name(series: str, file: str, seriesobj: list):
                     comment = " ".join(comments)
                 except TypeError:
                     comment = None
-                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": comment, "title": name.removesuffix(".mkv"), "date": date}
+                metadata = {"episode_id": ", ".join(epi.removeprefix("0") for epi in episodes), "season_number": seasonnum.removeprefix("0"), "show": series, "comment": comment, "title": title, "date": date}
                 return season, name, metadata
     return None, None, None
 
 
-def recode_series(folder: str, token: str):
+def recode_series(folder: str, apitokens: dict, lang: str):
     series = os.path.basename(folder)
-    seriesobj = get_series_from_tvdb(series, token)
+    parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
+    seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=lang)
+    series = f"{seriesname} ({year})"
     for dire in sorted(os.listdir(folder)):
-        for file in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
-            season, name, metadata = get_series_name(series, file, seriesobj)
+        if os.path.isdir(dire):
+            for file in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
+                season, name, metadata = get_series_name(series, file, seriesobj)
+                if name is not None:
+                    if not os.path.exists(os.path.join(parentfolder, series, season)):
+                        os.makedirs(os.path.join(parentfolder, series, season))
+                    recode(file=os.path.join(parentfolder, series, season, file), path=os.path.join(parentfolder, series, season, name), metadata=metadata, lang=lang, apitokens=apitokens)
+        else:
+            season, name, metadata = get_series_name(series, dire, seriesobj)
             if name is not None:
-                if not os.path.exists(os.path.join(os.path.realpath(folder), season)):
-                    os.mkdir(os.path.join(os.path.realpath(folder), season))
-                recode(os.path.join(os.path.realpath(os.path.join(folder, dire)), file), os.path.join(folder, season, name), metadata)
-
-
-def recode_all_series(folder: str, token: str):
-    for dire in sorted(os.listdir(folder)):
-        recode_series(os.path.join(folder, dire), token)
+                if not os.path.exists(os.path.join(parentfolder, series, season)):
+                    os.makedirs(os.path.join(parentfolder, series, season))
+                recode(file=os.path.join(os.path.realpath(folder), dire), path=os.path.join(parentfolder, series, season, name), metadata=metadata, lang=lang, apitokens=apitokens)
 
 
 def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
-    if stream.codec_name != "hevc" or stream.pix_fmt != "yuv420p" and not stream.disposition.attached_pic:
+    if (stream.codec_name != "hevc" or stream.pix_fmt != "yuv420p") and not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         if AMF:
             ffmpeg_recoding.extend([f"-c:v:{vindex}", "hevc_amf"])
@@ -253,12 +273,41 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int):
         sdefault.update({"lang": stream.tags.language, "oindex": stream.index, "sindex": sindex, "type": subtitle_type})
 
 
-def recode(file: str, path: str | None = None, metadata: dict | None = None, token: str | None = None):
+def get_subtitles_from_ost(token: str, metadata: dict, lang: str):
+    if lang == "deu":
+        lang = "eng"
+    searchstring = f"https://api.opensubtitles.com/api/v1/subtitles?languages={lang}"
+    if metadata.get("show", False):
+        match = re.findall(r"([\w\s]+)\s\((\d{4})\)",metadata["show"])[0]
+        name = match[0]
+        year = match[1]
+        searchstring += f"&query={urllib.parse.quote(name)}&year={year}"
+    else:
+        searchstring += f"&query={urllib.parse.quote(metadata["title"])}"
+    if metadata.get("episode_id", False):
+        searchstring += f"&episode_number={metadata["episode_id"]}"
+    if metadata.get("season_number", False):
+        searchstring += f"&season_number={metadata["season_number"]}"
+
+    response = requests.get(
+        searchstring,
+        headers={"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token["token"]}"},
+    )
+    subtitle = response.json()
+    print(subtitle)
+
+
+def recode(file: str, lang: str, path: str | None = None, metadata: dict | None = None, apitokens: dict | None = None):
 
     printlines = []
 
     adefault = {"aindex": None, "codec": None, "lang": None, "channels": None}
     sdefault = {"sindex": None, "type": None, "lang": None}
+
+    videostreams = []
+    audiostreams = []
+    subtitlestreams = []
+    attachmentstreams = []
 
     astreams = []
     sstreams = []
@@ -282,7 +331,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
     ffmpeg_command.extend(["ffmpeg", "-v", "error", "-stats", "-hwaccel", "auto", "-strict", "-2", "-i", os.path.realpath(file)])
 
     if path is None:
-        output_file, metadata = get_movie_name(file, token)
+        output_file, metadata = get_movie_name(file, apitokens["thetvdb"], lang=lang)
         if output_file is None:
             return
     else:
@@ -306,7 +355,7 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
         ffprobe = Ffprobe.from_dict(ffprobedict)
     except Exception as e:
         print(f"Error: {err.decode("utf-8")} {e}")
-        raise RuntimeError from e
+        return
     if ffprobe.streams is None:
         print(f"Error: {file} has no streams")
         return
@@ -327,24 +376,31 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
             printlines.append(
                 f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.filename} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
             )
-
-    for stream in ffprobe.streams:
         if stream.codec_type == "video" and not stream.disposition.attached_pic:
-            vrecoding, vindex = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines)
+            videostreams.append(stream)
+        elif stream.codec_type == "audio":
+            audiostreams.append(stream)
+        elif stream.codec_type == "subtitle":
+            subtitlestreams.append(stream)
+        elif stream.codec_type == "attachement":
+            attachmentstreams.append(stream)
 
-    for stream in ffprobe.streams:
-        if stream.codec_type == "audio":
-            arecoding, aindex = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines)
+    for stream in videostreams:
+        vrecoding, vindex = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines)
+
+    for stream in audiostreams:
+        arecoding, aindex = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines)
 
     if aindex == 0:
-        for stream in ffprobe.streams:
-            if stream.codec_type == "audio":
-                arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines)
-                aindex += 1
+        for stream in audiostreams:
+            arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines)
+            aindex += 1
 
-    for stream in ffprobe.streams:
-        if stream.codec_type == "subtitle":
-            sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines)
+    for stream in subtitlestreams:
+        sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines)
+
+    if sindex == 0:
+        get_subtitles_from_ost(token=apitokens["opensub"], metadata=metadata, lang=lang)
 
     for stream in ffprobe.streams:
         if stream.codec_type == "attachment":
@@ -354,15 +410,15 @@ def recode(file: str, path: str | None = None, metadata: dict | None = None, tok
             )
             tindex += 1
 
-    # for stream in ffprobe.streams:
-    #     if stream.codec_type == "video" and stream.disposition.attached_pic:
-    #         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-    #         ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
-    #         ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
-    #         printlines.append(
-    #             f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
-    #         )
-    #         vindex += 1
+    for stream in ffprobe.streams:
+        if stream.codec_type == "video" and stream.disposition.attached_pic:
+            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+            ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
+            ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
+            printlines.append(
+                f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
+            )
+            vindex += 1
 
     if aindex > 0 and adefault["aindex"] is not None:
         for stream in astreams:
@@ -455,65 +511,71 @@ def api_login() -> str:
         apikey = f.read()
         f.close()
     response = requests.post("https://api4.thetvdb.com/v4/login", json={"apikey": apikey}, timeout=10, headers={"Content-Type": "application/json"})
+    thetvdbtoken = response.json()["data"]["token"]
 
-    return response.json()["data"]["token"]
+    with open(os.path.join(os.path.dirname(__file__), "opensubtitles"), "r", encoding="utf-8") as f:
+        apikey = f.read()
+        f.close()
+    response = requests.post(
+        "https://api.opensubtitles.com/api/v1/login", json={"username": "sorogon", "password": "fB!Fm^6*%6YL42g2"}, timeout=10, headers={"Content-Type": "application/json", "Api-Key": apikey, "User-Agent": "recoder v1.0.0"}
+    )
+    opensubtitlestoken = response.json()["token"]
+    tokens = {"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": apikey}}
+    return tokens
 
 
 def main():
-    token = api_login()
-    notdir = 0
-    if len(sys.argv) < 2:
-        for file in sorted(os.listdir(os.getcwd())):
-            if os.path.isfile(file):
-                notdir += 1
-        if notdir == 0:
-            for folder in sorted(os.listdir(os.getcwd())):
-                for file in sorted(os.listdir(folder)):
-                    if os.path.isfile(os.path.join(folder, file)):
-                        notdir += 1
-            if notdir == 0:
-                recode_all_series(os.getcwd(), token)
-            else:
-                recode_series(os.getcwd(), token)
+    apitokens = api_login()
 
-        else:
-            for file in sorted(os.listdir(os.getcwd())):
-                try:
-                    recode(file, token=token)
-                except RuntimeError:
-                    continue
-    else:
-        if os.path.isdir(sys.argv[1]):
-            for file in sorted(os.listdir(sys.argv[1])):
-                if os.path.isfile(os.path.join(sys.argv[1], file)):
-                    notdir += 1
-            if notdir == 0:
-                recode_series(sys.argv[1], token)
+    parser = argparse.ArgumentParser(description="Recode media to common format", formatter_class=RichHelpFormatter)
+    parser.add_argument("-l", "--lang", help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language", choices=["eng", "deu"], default="eng", dest="lang", metavar="LANG")
+    parser.add_argument("-i", "--input", help="File to recode", type=str, required=False, dest="inputfile", metavar="FILE")
+    parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIRECTORY")
+    parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename"], required=True, dest="contentype", metavar="TYPE")
+    args = parser.parse_args()
+
+    if args.contentype == "film":
+        if args.inputfile:
+            if os.path.isfile(args.inputfile):
+                recode(file=args.inputfile, apitokens=apitokens, lang=args.lang)
             else:
-                for file in sorted(os.listdir(sys.argv[1])):
-                    recode(sys.argv[1] + "/" + file, token=token)
-        elif sys.argv[1] == "rename":
-            folder = os.getcwd()
-            series = os.path.basename(folder)
-            seriesobj = get_series_from_tvdb(series, token)
-            for dire in sorted(os.listdir(folder)):
-                if not os.path.isfile(os.path.join(folder, dire)):
-                    for file in sorted(os.listdir(os.path.realpath(dire))):
-                        try:
-                            season, name, metadata = get_series_name(series, file, seriesobj)
-                        except RuntimeError:
-                            continue
-                        if season is not None:
-                            old = os.path.join(folder, dire, file)
-                            new = os.path.splitext(os.path.join(folder, season, name))[0] + os.path.splitext(file)[1]
-                            if old != new:
-                                if not os.path.exists(os.path.join(folder, season)):
-                                    os.mkdir(os.path.join(folder, season))
-                                print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
-                                shutil.move(old, new)
-        for container in VIDEO_CONTAINERS:
-            if sys.argv[1].endswith(container):
-                recode(sys.argv[1], token=token)
+                error = f'File "{args.inputfile}" does not exist or is a directory.'
+                raise FileNotFoundError(error)
+        elif args.inputdir:
+            if os.path.isdir(args.inputdir):
+                for file in os.listdir(args.inputdir):
+                    recode(file=file, apitokens=apitokens, lang=args.lang)
+            else:
+                error = f'Directory "{args.inputdir}" does not exist'
+                raise FileNotFoundError(error)
+        else:
+            print("error: inputfile or directory required if type is film")
+            sys.exit()
+    elif args.contentype == "series":
+        if args.inputdir:
+            if os.path.isdir(args.inputdir):
+                recode_series(args.inputdir, apitokens=apitokens, lang=args.lang)
+            else:
+                error = f'Directory "{args.inputdir}" does not exist'
+                raise FileNotFoundError(error)
+        else:
+            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang)
+    elif args.contentype == "rename":
+        folder = os.getcwd()
+        series = os.path.basename(folder)
+        seriesobj = get_series_from_tvdb(series, apitokens, lang=args.lang)
+        for dire in sorted(os.listdir(folder)):
+            if not os.path.isfile(os.path.join(folder, dire)):
+                for file in sorted(os.listdir(os.path.realpath(dire))):
+                    season, name, metadata = get_series_name(series, file, seriesobj)
+                    if season is not None:
+                        old = os.path.join(folder, dire, file)
+                        new = os.path.splitext(os.path.join(folder, season, name))[0] + os.path.splitext(file)[1]
+                        if old != new:
+                            if not os.path.exists(os.path.join(folder, season)):
+                                os.mkdir(os.path.join(folder, season))
+                            print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
+                            shutil.move(old, new)
 
 
 if __name__ == "__main__":
