@@ -84,6 +84,7 @@ def get_movie_name(file: str, token: str, lang: str):
 
 
 def get_series_from_tvdb(series: str, token: str, lang: str) -> list:
+    headers = {"Authorization": f"Bearer {token}"}
     match = re.search(r"\((\d{4})\)", series)
     try:
         seriesyear = match.groups()[0]
@@ -91,14 +92,21 @@ def get_series_from_tvdb(series: str, token: str, lang: str) -> list:
     except AttributeError:
         seriesyear = ""
         queryseries = urllib.parse.quote(re.search(r"[A-Za-z._-]+", series)[0].replace(".", " ").replace("-", " ").replace("_", " ").upper().removesuffix("S").strip())
-    response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}&language={lang}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+    response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}&language={lang}", timeout=10, headers=headers)
     if response.status_code != 200:
-        response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+        response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers=headers)
     seriesid = response.json()["data"][0]["id"].removeprefix("series-")
-    response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/default/{lang}?page=0", timeout=10, headers={"Authorization": f"Bearer {token}"})
-    returnlst: list = response.json()["data"]["episodes"]
-    name = response.json()["data"]["name"]
-    year = response.json()["data"]["year"]
+    response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/default/{lang}?page=0", timeout=10, headers=headers)
+    data = response.json()["data"]
+    returnlst: list = data["episodes"]
+    if lang in data["nameTranslations"]:
+        translationres = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/translations/{lang}", timeout=10, headers=headers)
+        translation = translationres.json()["data"]
+        name = translation["name"]
+    else:
+        name = data["name"]
+    year = data["year"]
+
     while response.json()["links"]["next"] is not None:
         response = requests.get(response.json()["links"]["next"], timeout=10, headers={"Authorization": f"Bearer {token}"})
         returnlst.extend(response.json()["data"]["episodes"])
@@ -167,7 +175,7 @@ def recode_series(folder: str, apitokens: dict, lang: str):
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
                         os.makedirs(os.path.join(parentfolder, series, season))
                     recode(
-                        file=os.path.join(parentfolder, series, season, file),
+                        file=os.path.join(folder, dire, file),
                         path=os.path.join(parentfolder, series, season, name),
                         metadata=metadata,
                         lang=lang,
@@ -183,7 +191,7 @@ def recode_series(folder: str, apitokens: dict, lang: str):
 
 def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list):
     if stream.tags is None:
-        stream.tags = StreamTags.from_dict({"title": None})
+        stream.tags = StreamTags(title=None)
     if (stream.codec_name != "hevc" or stream.pix_fmt != "yuv420p") and not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         if AMF:
@@ -288,7 +296,7 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int):
 
 
 def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
-    headers = {"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token["token"]}"}
+    headers = {"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.1", "Authorization": f"Bearer {token["token"]}"}
     if metadata.get("show", False):
         match = re.findall(r"([\w\s]+)\s\((\d{4})\)", metadata["show"])[0]
         name = f"{match[0]} ({match[1]}) - {metadata["title"]}"
@@ -381,7 +389,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
     printlines.append(f"{Color.RED}Streams{Style.RESET_ALL}:")
     for stream in ffprobe.streams:
         if stream.tags is None:
-            stream.tags = StreamTags.from_dict({"title": None, "language": None})
+            stream.tags = StreamTags(title=None, language=None)
         if stream.disposition.default:
             disposition = "default"
         else:
