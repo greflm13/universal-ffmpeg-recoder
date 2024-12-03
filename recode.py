@@ -97,6 +97,8 @@ def get_series_from_tvdb(series: str, token: str, lang: str) -> list:
     except AttributeError:
         seriesyear = ""
         queryseries = urllib.parse.quote(re.search(r"[A-Za-z._-]+", series)[0].replace(".", " ").replace("-", " ").replace("_", " ").upper().removesuffix("S").strip())
+    if token is None:
+        return [], "", seriesyear
     response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}&language={lang}", timeout=10, headers=headers)
     if response.status_code != 200:
         response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers=headers)
@@ -173,7 +175,8 @@ def recode_series(folder: str, apitokens: dict | None, lang: str):
     series = os.path.basename(folder)
     parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
     seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=lang)
-    series = f"{seriesname} ({year})"
+    if year != "":
+        series = f"{seriesname} ({year})"
     for dire in sorted(os.listdir(folder)):
         if os.path.isdir(dire):
             for file in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
