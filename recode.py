@@ -8,6 +8,7 @@ import shutil
 import datetime
 import tempfile
 import argparse
+import configparser
 import urllib.parse
 
 from subprocess import Popen, PIPE, STDOUT
@@ -62,9 +63,13 @@ def get_movie_name(file: str, token: str, lang: str):
                 year: str = match.group()
                 movie_name: str = file[: match.start()].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
                 output_file = f"{movie_name}({year}).mkv"
-                response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}&language={lang}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+                response = requests.get(
+                    f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}&language={lang}", timeout=10, headers={"Authorization": f"Bearer {token}"}
+                )
                 if response.status_code != 200:
-                    response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+                    response = requests.get(
+                        f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"}
+                    )
                 try:
                     ret = response.json()["data"][0]
                     if "overviews" in ret and lang in ret["overviews"]:
@@ -162,7 +167,9 @@ def get_series_name(series: str, file: str, seriesobj: list):
     return None, None, None
 
 
-def recode_series(folder: str, apitokens: dict, lang: str):
+def recode_series(folder: str, apitokens: dict | None, lang: str):
+    if apitokens == None:
+        apitokens = {"thetvdb": None}
     series = os.path.basename(folder)
     parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
     seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=lang)
@@ -237,7 +244,9 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
 
 
 def update_audio_default(adefault: dict, stream: Stream, aindex: int):
-    if (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0)) or (AUDIO_PRIORITY.get(stream.codec_name, 0) == AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels > adefault["channels"]):
+    if (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0)) or (
+        AUDIO_PRIORITY.get(stream.codec_name, 0) == AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels > adefault["channels"]
+    ):
         adefault.update(
             {
                 "aindex": aindex,
@@ -367,7 +376,9 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         metadata = {}
         metadata["title"] = os.path.basename(os.path.splitext(output_file)[0])
 
-    printlines.append(f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
+    printlines.append(
+        f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}"
+    )
 
     p = Popen(
         ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", os.path.realpath(file), "-strict", "-2"],
@@ -493,7 +504,9 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
             if tag not in format_tags:
                 printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
             else:
-                printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}{format_tags[tag]}{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
+                printlines.append(
+                    f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}{format_tags[tag]}{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}"
+                )
             ffmpeg_metadata.extend(["-metadata", f"{tag}={metadata[tag].strip()}"])
             changemetadata = True
 
@@ -554,33 +567,57 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
     print(f"{Color.GREEN}Done!{Style.RESET_ALL}")
 
 
-def api_login() -> str:
-    with open(os.path.join(os.path.dirname(__file__), "apikey"), "r", encoding="utf-8") as f:
-        apikey = f.read()
-        f.close()
-    response = requests.post("https://api4.thetvdb.com/v4/login", json={"apikey": apikey}, timeout=10, headers={"Content-Type": "application/json"})
+def api_login(config: str) -> str:
+    if not os.path.exists(config):
+        os.mknod(config)
+
+    conf = configparser.ConfigParser()
+    conf.read(config)
+
+    if not "thetvdb" in conf:
+        conf["thetvdb"] = {}
+        conf["thetvdb"]["apikey"] = input('theTVDB api not configured. Please open "https://thetvdb.com/api-information/signup" and paste the api key here: ')
+    if not "opensubtitles" in conf:
+        conf["opensubtitles"] = {}
+        conf["opensubtitles"]["apikey"] = input('OpenSubtitles api not configured. Please open "https://www.opensubtitles.com/consumers" and paste the api key here: ')
+        conf["opensubtitles"]["user"] = input("username: ")
+        conf["opensubtitles"]["password"] = input("password: ")
+
+    with open(config, "w") as configfile:
+        conf.write(configfile)
+
+    response = requests.post("https://api4.thetvdb.com/v4/login", json={"apikey": conf.get("thetvdb", "apikey")}, timeout=10, headers={"Content-Type": "application/json"})
     thetvdbtoken = response.json()["data"]["token"]
 
-    with open(os.path.join(os.path.dirname(__file__), "opensubtitles"), "r", encoding="utf-8") as f:
-        cred = json.loads(f.read())
-        f.close()
     response = requests.post(
         "https://api.opensubtitles.com/api/v1/login",
-        json={"username": cred["username"], "password": cred["password"]},
+        json={"username": conf.get("opensubtitles", "user"), "password": conf.get("opensubtitles", "password")},
         timeout=10,
-        headers={"Content-Type": "application/json", "Api-Key": cred["api_key"], "User-Agent": "recoder v1.0.0"},
+        headers={"Content-Type": "application/json", "Api-Key": conf.get("opensubtitles", "apikey"), "User-Agent": "recoder v1.0.0"},
     )
     opensubtitlestoken = response.json()["token"]
-    tokens = {"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": apikey}}
+
+    tokens = {"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": conf.get("opensubtitles", "apikey")}}
     return tokens
 
 
 def logout(token):
-    requests.delete("https://api.opensubtitles.com/api/v1/logout", headers={"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token["token"]}"})
+    requests.delete(
+        "https://api.opensubtitles.com/api/v1/logout",
+        headers={"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token["token"]}"},
+    )
 
 
 def main():
-    apitokens = api_login()
+    if "APPDATA" in os.environ:
+        confighome = os.environ["APPDATA"]
+    elif "XDG_CONFIG_HOME" in os.environ:
+        confighome = os.environ["XDG_CONFIG_HOME"]
+    else:
+        confighome = os.path.join(os.environ["HOME"], ".config")
+    configpath = os.path.join(confighome, "universal-ffmpeg-recoder")
+    if not os.path.exists:
+        os.makedirs(configpath)
 
     parser = argparse.ArgumentParser(description="Recode media to common format", formatter_class=RichHelpFormatter)
     parser.add_argument(
@@ -595,7 +632,13 @@ def main():
     parser.add_argument("-i", "--input", help="File to recode", type=str, required=False, dest="inputfile", metavar="FILE")
     parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIRECTORY")
     parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename"], required=True, dest="contentype", metavar="TYPE")
+    parser.add_argument("-a", "--no-api", help="Disable Metadata and Subtitle APIs", default=False, action="store_true", dest="apis")
     args = parser.parse_args()
+
+    if not args.apis:
+        apitokens = api_login(configpath)
+    else:
+        apitokens = None
 
     if args.contentype == "film":
         if args.inputfile:
