@@ -18,8 +18,8 @@
                 "request": "launch",
                 "program": "${workspaceFolder}/recode.py",
                 "console": "integratedTerminal",
-                "args": ["-t", "series", "-l", "deu"],
-                "cwd": "/home/user/Videos/Heidi (1974)"
+                "args": ["-t", "series", "-l", "eng", "-s", "Subs"],
+                "cwd": "/home/user/Videos/Rick.and.Morty.S01.1080p.BluRay.x265-RARBG"
             },
             {
                 "name": "Generate Schema",

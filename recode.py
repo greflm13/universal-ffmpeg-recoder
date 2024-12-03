@@ -169,7 +169,7 @@ def get_series_name(series: str, file: str, seriesobj: list):
     return None, None, None
 
 
-def recode_series(folder: str, apitokens: dict | None, lang: str):
+def recode_series(folder: str, apitokens: dict | None, lang: str, subdir: str = ""):
     if apitokens == None:
         apitokens = {"thetvdb": None}
     series = os.path.basename(folder)
@@ -190,13 +190,21 @@ def recode_series(folder: str, apitokens: dict | None, lang: str):
                         metadata=metadata,
                         lang=lang,
                         apitokens=apitokens,
+                        subdir=subdir,
                     )
         else:
             season, name, metadata = get_series_name(series, dire, seriesobj)
             if name is not None:
                 if not os.path.exists(os.path.join(parentfolder, series, season)):
                     os.makedirs(os.path.join(parentfolder, series, season))
-                recode(file=os.path.join(os.path.realpath(folder), dire), path=os.path.join(parentfolder, series, season, name), metadata=metadata, lang=lang, apitokens=apitokens)
+                recode(
+                    file=os.path.join(os.path.realpath(folder), dire),
+                    path=os.path.join(parentfolder, series, season, name),
+                    metadata=metadata,
+                    lang=lang,
+                    apitokens=apitokens,
+                    subdir=subdir,
+                )
 
 
 def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list):
@@ -334,7 +342,9 @@ def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
     return tmpfile
 
 
-def recode(file: str, lang: str, path: str | None = None, metadata: dict | None = None, apitokens: dict | None = None):
+def recode(file: str, lang: str, path: str | None = None, metadata: dict | None = None, apitokens: dict | None = None, subdir: str = ""):
+    prelines = []
+    midlines = []
     printlines = []
 
     adefault = {"aindex": None, "codec": None, "lang": None, "channels": None}
@@ -379,7 +389,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         metadata = {}
         metadata["title"] = os.path.basename(os.path.splitext(output_file)[0])
 
-    printlines.append(
+    prelines.append(
         f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}"
     )
 
@@ -400,7 +410,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         print(f"Error: {file} has no streams")
         return
 
-    printlines.append(f"{Color.RED}Streams{Style.RESET_ALL}:")
+    midlines.append(f"{Color.RED}Streams{Style.RESET_ALL}:")
     for stream in ffprobe.streams:
         if stream.tags is None:
             stream.tags = StreamTags(title=None, language=None)
@@ -409,7 +419,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         else:
             disposition = "none"
         if stream.codec_type != "attachment":
-            printlines.append(
+            midlines.append(
                 f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
             )
             if stream.codec_type == "video" and not stream.disposition.attached_pic:
@@ -419,7 +429,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
             elif stream.codec_type == "subtitle":
                 subtitlestreams.append(stream)
         elif stream.codec_type == "attachment":
-            printlines.append(
+            midlines.append(
                 f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.filename} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
             )
             attachmentstreams.append(stream)
@@ -439,8 +449,15 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines)
 
     if sindex == 0:
-        try:
+        if subdir != "" and os.path.isdir(subdir):
+            episode = re.findall(r"[Ss]\d{2,4}[Ee]\d{2,4}", path)[0]
+            files = os.listdir(subdir)
+            subfile = [fil for fil in files if episode in fil]
+            if len(subfile) == 1:
+                subfile = os.path.join(subdir, subfile[0])
+        else:
             subfile = get_subtitles_from_ost(token=apitokens["opensub"], metadata=metadata, lang=lang, file=file)
+        try:
             p = Popen(
                 ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", subfile, "-strict", "-2"],
                 stdout=PIPE,
@@ -453,10 +470,14 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
                 sub = Ffprobe.from_dict(ffprobedict)
             except Exception:
                 ...
+            prelines.append(f"{Color.RED}Adding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(subfile)}{Style.RESET_ALL}")
             ffmpeg_command.extend(["-i", subfile])
             for stream in sub.streams:
                 if stream.tags is None:
                     stream.tags = StreamTags.from_dict({"title": None, "language": lang})
+                midlines.append(
+                    f"{Color.BLUE}1:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
+                )
                 sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, file=1)
         except Exception:
             ...
@@ -535,6 +556,10 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
     ffmpeg_command.extend(ffmpeg_dispositions)
     ffmpeg_command.extend(ffmpeg_metadata)
     ffmpeg_command.extend(["-f", "matroska", "-y", tmpfile])
+    for line in prelines:
+        print(line)
+    for line in midlines:
+        print(line)
     for line in printlines:
         print(line)
     # print(" ".join(ffmpeg_command))
@@ -565,8 +590,9 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
             if os.path.exists(tmpfile):
                 os.remove(tmpfile)
     finally:
-        if os.path.exists(subfile):
-            os.remove(subfile)
+        if isinstance(subfile, str):
+            if os.path.exists(subfile):
+                os.remove(subfile)
     print(f"{Color.GREEN}Done!{Style.RESET_ALL}")
 
 
@@ -633,9 +659,10 @@ def main():
         metavar="LANG",
     )
     parser.add_argument("-i", "--input", help="File to recode", type=str, required=False, dest="inputfile", metavar="FILE")
-    parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIRECTORY")
+    parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIR")
     parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename"], required=True, dest="contentype", metavar="TYPE")
     parser.add_argument("-a", "--no-api", help="Disable Metadata and Subtitle APIs", default=False, action="store_true", dest="apis")
+    parser.add_argument("-s", "--subtitle", help="Directory containing Subtitles", required=False, default="", dest="subdir", metavar="DIR")
     args = parser.parse_args()
 
     if not args.apis:
@@ -646,14 +673,14 @@ def main():
     if args.contentype == "film":
         if args.inputfile:
             if os.path.isfile(args.inputfile):
-                recode(file=args.inputfile, apitokens=apitokens, lang=args.lang)
+                recode(file=args.inputfile, apitokens=apitokens, lang=args.lang, subdir=args.subdir)
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
                 raise FileNotFoundError(error)
         elif args.inputdir:
             if os.path.isdir(args.inputdir):
                 for file in os.listdir(args.inputdir):
-                    recode(file=file, apitokens=apitokens, lang=args.lang)
+                    recode(file=file, apitokens=apitokens, lang=args.lang, subdir=args.subdir)
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
@@ -663,12 +690,12 @@ def main():
     elif args.contentype == "series":
         if args.inputdir:
             if os.path.isdir(args.inputdir):
-                recode_series(args.inputdir, apitokens=apitokens, lang=args.lang)
+                recode_series(args.inputdir, apitokens=apitokens, lang=args.lang, subdir=args.subdir)
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
         else:
-            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang)
+            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang, subdir=args.subdir)
     elif args.contentype == "rename":
         folder = os.getcwd()
         series = os.path.basename(folder)
