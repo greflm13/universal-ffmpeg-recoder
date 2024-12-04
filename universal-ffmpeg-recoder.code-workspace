@@ -18,8 +18,8 @@
                 "request": "launch",
                 "program": "${workspaceFolder}/recode.py",
                 "console": "integratedTerminal",
-                "args": ["-t", "series", "-l", "eng", "-s", "Subs"],
-                "cwd": "/home/user/Videos/Rick.and.Morty.S01.1080p.BluRay.x265-RARBG"
+                "args": ["-t", "rename", "-l", "eng"],
+                "cwd": "/home/user/Videos/Star.Trek.Lower.Decks.S01.COMPLETE.720p.AMZN.WEBRip.x264-GalaxyTV[TGx]"
             },
             {
                 "name": "Generate Schema",
