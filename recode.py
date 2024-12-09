@@ -238,10 +238,8 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
         printlines.append(
             f"Copying {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
         )
-    if bit == 8 and stream.pix_fmt != "yuv420p":
-        ffmpeg_recoding.extend(["-vf", "format=yuv420p"])
     vindex += 1
-    return vrecoding, vindex
+    return vrecoding, vindex, stream.pix_fmt
 
 
 def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list):
@@ -449,7 +447,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
             attachmentstreams.append(stream)
 
     for stream in videostreams:
-        vrecoding, vindex = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, codec, bit)
+        vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, codec, bit)
 
     for stream in audiostreams:
         arecoding, aindex = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines)
@@ -561,8 +559,18 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
     ffmpeg_command.extend(ffmpeg_mapping)
     ffmpeg_command.extend(ffmpeg_recoding)
     if vrecoding:
-        if AMF:
-            ffmpeg_command.extend(["-rc", "cqp", "-qp_i", "23", "-qp_p", "23", "-quality", "quality", "-pixel_format", "yuv420p"])
+        if HWACC == "AMF":
+            ffmpeg_command.extend(["-rc", "hqvbr", "-qvbr_quality_level", "23", "-quality", "quality"])
+            if bit == 10 and pix_fmt == "yuv420p10le":
+                ffmpeg_command.extend(["-pixel_format", "p010le"])
+            else:
+                ffmpeg_command.extend(["-pixel_format", "yuv420p"])
+        elif HWACC == "CUDA":
+            ffmpeg_command.extend(["-preset", "p7", "-rc", "vbr_hq", "-cq", "23"])
+            if bit == 10 and pix_fmt == "yuv420p10le":
+                ffmpeg_command.extend(["-pixel_format", "p010le"])
+            else:
+                ffmpeg_command.extend(["-pixel_format", "yuv420p"])
         else:
             ffmpeg_command.extend(["-crf", "23", "-preset", "veryslow"])
     if arecoding:
