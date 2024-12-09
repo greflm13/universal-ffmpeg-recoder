@@ -36,9 +36,11 @@ VIDEO_CONTAINERS = [
 AUDIO_PRIORITY = {"dts": 4, "truehd": 3, "eac3": 2, "ac3": 1}
 SUBTITLE_PRIORITY = {"full": 3, "sdh": 2, "none": 1}
 if os.path.exists("/usr/lib/libamfrt64.so"):
-    AMF = True
+    HWACC = "AMF"
+elif os.path.exists("/usr/lib/libcuda.so"):
+    HWACC = "CUDA"
 else:
-    AMF = False
+    HWACC = None
 
 
 def rename_keys_to_lower(iterable):
@@ -169,7 +171,7 @@ def get_episode_name(series: str, file: str, seriesobj: list):
     return None, None, None
 
 
-def recode_series(folder: str, apitokens: dict | None, lang: str, subdir: str = ""):
+def recode_series(folder: str, apitokens: dict | None, lang: str, subdir: str = "", codec: str = "h265", bit: int = 10):
     if apitokens == None:
         apitokens = {"thetvdb": None}
     series = os.path.basename(folder)
@@ -191,6 +193,8 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, subdir: str = 
                         lang=lang,
                         apitokens=apitokens,
                         subdir=subdir,
+                        codec=codec,
+                        bit=bit,
                     )
         else:
             season, name, metadata = get_episode_name(series, dire, seriesobj)
@@ -204,18 +208,26 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, subdir: str = 
                     lang=lang,
                     apitokens=apitokens,
                     subdir=subdir,
+                    codec=codec,
+                    bit=bit,
                 )
 
 
-def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list):
+def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list, codec="h265", bit=10):
+    if codec == "h265":
+        codec = {"name": "hevc", "swenc": "libx265", "amdenc": "hevc_amf", "nvdenc": "hevc_nvenc"}
+    elif codec == "h264":
+        codec = {"name": "h264", "swenc": "libx264", "amdenc": "h264_amf", "nvdenc": "h264_nvenc"}
     if stream.tags is None:
         stream.tags = StreamTags(title=None)
-    if (stream.codec_name != "hevc" or stream.pix_fmt != "yuv420p") and not stream.disposition.attached_pic:
+    if (stream.codec_name != codec["name"] or (bit == 8 and stream.pix_fmt != "yuv420p")) and not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-        if AMF:
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", "hevc_amf"])
+        if HWACC == "AMF":
+            ffmpeg_recoding.extend([f"-c:v:{vindex}", codec["amdenc"]])
+        elif HWACC == "CUDA":
+            ffmpeg_recoding.extend([f"-c:v:{vindex}", codec["nvdenc"]])
         else:
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", "libx265"])
+            ffmpeg_recoding.extend([f"-c:v:{vindex}", codec["swenc"]])
         vrecoding = True
         printlines.append(
             f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}hevc{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
@@ -226,6 +238,8 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
         printlines.append(
             f"Copying {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
         )
+    if bit == 8 and stream.pix_fmt != "yuv420p":
+        ffmpeg_recoding.extend(["-vf", "format=yuv420p"])
     vindex += 1
     return vrecoding, vindex
 
@@ -342,7 +356,7 @@ def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
     return tmpfile
 
 
-def recode(file: str, lang: str, path: str | None = None, metadata: dict | None = None, apitokens: dict | None = None, subdir: str = ""):
+def recode(file: str, lang: str, path: str | None = None, metadata: dict | None = None, apitokens: dict | None = None, subdir: str = "", codec: str = "h265", bit: int = 10):
     prelines = []
     midlines = []
     printlines = []
@@ -435,7 +449,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
             attachmentstreams.append(stream)
 
     for stream in videostreams:
-        vrecoding, vindex = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines)
+        vrecoding, vindex = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, codec, bit)
 
     for stream in audiostreams:
         arecoding, aindex = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines)
@@ -663,6 +677,8 @@ def main():
     parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename"], required=True, dest="contentype", metavar="TYPE")
     parser.add_argument("-a", "--no-api", help="Disable Metadata and Subtitle APIs", default=False, action="store_true", dest="apis")
     parser.add_argument("-s", "--subtitle", help="Directory containing Subtitles", required=False, default="", dest="subdir", metavar="DIR")
+    parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265"], dest="codec", metavar="CODEC", default="h265")
+    parser.add_argument("-b", "--bit", help="Select bit depth", required=False, choices=["8", "10"], dest="bit", metavar="BIT", default="10")
     args = parser.parse_args()
 
     if not args.apis:
@@ -673,14 +689,14 @@ def main():
     if args.contentype == "film":
         if args.inputfile:
             if os.path.isfile(args.inputfile):
-                recode(file=args.inputfile, apitokens=apitokens, lang=args.lang, subdir=args.subdir)
+                recode(file=args.inputfile, apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
                 raise FileNotFoundError(error)
         elif args.inputdir:
             if os.path.isdir(args.inputdir):
                 for file in os.listdir(args.inputdir):
-                    recode(file=file, apitokens=apitokens, lang=args.lang, subdir=args.subdir)
+                    recode(file=file, apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
@@ -690,12 +706,12 @@ def main():
     elif args.contentype == "series":
         if args.inputdir:
             if os.path.isdir(args.inputdir):
-                recode_series(args.inputdir, apitokens=apitokens, lang=args.lang, subdir=args.subdir)
+                recode_series(args.inputdir, apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
         else:
-            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang, subdir=args.subdir)
+            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
     elif args.contentype == "rename":
         folder = os.getcwd()
         series = os.path.basename(folder)
