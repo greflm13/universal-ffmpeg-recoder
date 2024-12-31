@@ -691,6 +691,7 @@ def main():
     args = parser.parse_args()
 
     if args.hwaccel == False:
+        global HWACC
         HWACC = None
 
     if not args.apis:
