@@ -687,7 +687,11 @@ def main():
     parser.add_argument("-s", "--subtitle", help="Directory containing Subtitles", required=False, default="", dest="subdir", metavar="DIR")
     parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265"], dest="codec", metavar="CODEC", default="h265")
     parser.add_argument("-b", "--bit", help="Select bit depth", required=False, choices=["8", "10"], dest="bit", metavar="BIT", default="10")
+    parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
     args = parser.parse_args()
+
+    if args.hwaccel == False:
+        HWACC = None
 
     if not args.apis:
         apitokens = api_login(configpath)
