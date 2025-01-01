@@ -342,7 +342,10 @@ def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
     params["order_by"] = "ratings"
 
     response = requests.get("https://api.opensubtitles.com/api/v1/subtitles", params=urllib.parse.urlencode(params), headers=headers)
-    subtitle = response.json()["data"][0]["attributes"]
+    try:
+        subtitle = response.json()["data"][0]["attributes"]
+    except IndexError:
+        return None
     response = requests.post("https://api.opensubtitles.com/api/v1/download", headers=headers, json={"file_id": subtitle["files"][0]["file_id"]})
     link = response.json()["link"]
     filename = response.json()["file_name"]
