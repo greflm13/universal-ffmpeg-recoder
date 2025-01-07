@@ -214,7 +214,9 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, subdir: str = 
 
 
 def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list, codec="h265", bit=10):
-    if codec == "h265":
+    if codec == "av1":
+        codec = {"name": "av1", "swenc": "libsvtav1", "amdenc": "av1_amf", "nvdenc": "av1_nvenc"}
+    elif codec == "h265":
         codec = {"name": "hevc", "swenc": "libx265", "amdenc": "hevc_amf", "nvdenc": "hevc_nvenc"}
     elif codec == "h264":
         codec = {"name": "h264", "swenc": "libx264", "amdenc": "h264_amf", "nvdenc": "h264_nvenc"}
@@ -230,7 +232,7 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
             ffmpeg_recoding.extend([f"-c:v:{vindex}", codec["swenc"]])
         vrecoding = True
         printlines.append(
-            f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}hevc{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
+            f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}{codec["name"]}{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
         )
     elif not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
@@ -569,13 +571,23 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
             else:
                 ffmpeg_command.extend(["-pixel_format", "yuv420p"])
         elif HWACC == "CUDA":
-            ffmpeg_command.extend(["-preset", "p7", "-rc", "vbr_hq", "-cq", "23"])
+            if codec != "av1":
+                ffmpeg_command.extend(["-preset", "p7", "-rc", "vbr_hq", "-cq", "23"])
+            else:
+                ffmpeg_command.extend(["-preset", "p7", "-rc", "vbr", "-cq", "23"])
             if bit == 10 and pix_fmt == "yuv420p10le":
                 ffmpeg_command.extend(["-pixel_format", "p010le"])
             else:
                 ffmpeg_command.extend(["-pixel_format", "yuv420p"])
         else:
-            ffmpeg_command.extend(["-crf", "23", "-preset", "veryslow"])
+            if codec != "av1":
+                ffmpeg_command.extend(["-crf", "23", "-preset", "veryslow"])
+            else:
+                ffmpeg_command.extend(["-crf", "23"])
+            if bit == 10 and pix_fmt == "yuv420p10le":
+                ffmpeg_command.extend(["-pixel_format", "yuv420p10le"])
+            else:
+                ffmpeg_command.extend(["-pixel_format", "yuv420p"])
     if arecoding:
         ffmpeg_command.extend(["-b:a", "192k", "-ar", "48000"])
     ffmpeg_command.extend(ffmpeg_dispositions)
@@ -688,7 +700,7 @@ def main():
     parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename"], required=True, dest="contentype", metavar="TYPE")
     parser.add_argument("-a", "--no-api", help="Disable Metadata and Subtitle APIs", default=False, action="store_true", dest="apis")
     parser.add_argument("-s", "--subtitle", help="Directory containing Subtitles", required=False, default="", dest="subdir", metavar="DIR")
-    parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265"], dest="codec", metavar="CODEC", default="h265")
+    parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265", "av1"], dest="codec", metavar="CODEC", default="av1")
     parser.add_argument("-b", "--bit", help="Select bit depth", required=False, choices=["8", "10"], dest="bit", metavar="BIT", default="10")
     parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
     args = parser.parse_args()
