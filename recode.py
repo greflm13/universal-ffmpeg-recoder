@@ -513,7 +513,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         tindex += 1
 
     for stream in ffprobe.streams:
-        if stream.codec_type == "video" and stream.disposition.attached_pic:
+        if stream.codec_type == "video" and (stream.disposition.attached_pic or stream.codec_type == "mjpeg"):
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
             ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
