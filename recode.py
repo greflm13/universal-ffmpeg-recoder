@@ -436,7 +436,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         else:
             disposition = "none"
         if stream.codec_type != "attachment":
-            if stream.codec_type == "video" and not (stream.disposition.attached_pic or stream.codec_type == "mjpeg"):
+            if stream.codec_type == "video" and not (stream.disposition.attached_pic or stream.codec_name == "mjpeg"):
                 midlines.append(
                     f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.WHITE}{stream.pix_fmt} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
                 )
@@ -513,7 +513,9 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         tindex += 1
 
     for stream in ffprobe.streams:
-        if stream.codec_type == "video" and (stream.disposition.attached_pic or stream.codec_type == "mjpeg"):
+        if stream.codec_type == "video" and (stream.disposition.attached_pic or stream.codec_name == "mjpeg"):
+            if not stream.disposition.attached_pic:
+                changemetadata = True
             ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
             ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
