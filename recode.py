@@ -436,14 +436,20 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         else:
             disposition = "none"
         if stream.codec_type != "attachment":
-            midlines.append(
-                f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.WHITE}{stream.pix_fmt} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
-            )
             if stream.codec_type == "video" and not stream.disposition.attached_pic:
+                midlines.append(
+                    f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.WHITE}{stream.pix_fmt} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
+                )
                 videostreams.append(stream)
             elif stream.codec_type == "audio":
+                midlines.append(
+                    f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
+                )
                 audiostreams.append(stream)
             elif stream.codec_type == "subtitle":
+                midlines.append(
+                    f"{Color.BLUE}0:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
+                )
                 subtitlestreams.append(stream)
         elif stream.codec_type == "attachment":
             midlines.append(
