@@ -18,8 +18,8 @@
                 "request": "launch",
                 "program": "${workspaceFolder}/recode.py",
                 "console": "integratedTerminal",
-                "args": ["-t", "rename", "-l", "eng"],
-                "cwd": "/home/user/Videos/Star.Trek.Lower.Decks.S01.COMPLETE.720p.AMZN.WEBRip.x264-GalaxyTV[TGx]"
+                "args": ["-t", "series", "-l", "eng"],
+                "cwd": "/mnt/nfs/series/South Park (1997)"
             },
             {
                 "name": "Generate Schema",
