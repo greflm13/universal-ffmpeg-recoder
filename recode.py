@@ -33,7 +33,7 @@ VIDEO_CONTAINERS = [
 ]
 # fmt: on
 
-AUDIO_PRIORITY = {"dts": 4, "truehd": 3, "eac3": 2, "ac3": 1}
+AUDIO_PRIORITY = {"dts": 5, "opus": 4, "truehd": 3, "eac3": 2, "ac3": 1}
 SUBTITLE_PRIORITY = {"full": 3, "sdh": 2, "none": 1}
 if os.path.exists("/usr/lib/libamfrt64.so"):
     HWACC = "AMF"
@@ -81,6 +81,7 @@ def get_movie_name(file: str, token: str, lang: str):
                     if "first_air_time" in ret and ret["first_air_time"] != "":
                         date = ret["first_air_time"]
                     metadata = {"comment": comment, "title": ret["extended_title"], "date": date}
+                    output_file = f"{ret['extended_title']}.mkv"
                 except IndexError:
                     metadata = {"title": f"{movie_name}({year})"}
             else:
@@ -232,7 +233,7 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
             ffmpeg_recoding.extend([f"-c:v:{vindex}", codec["swenc"]])
         vrecoding = True
         printlines.append(
-            f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}{codec["name"]} {Color.YELLOW}{stream.pix_fmt}{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
+            f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}{codec['name']} {Color.YELLOW}{stream.pix_fmt}{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
         )
     elif not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
@@ -330,10 +331,10 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int):
 
 
 def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
-    headers = {"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.1", "Authorization": f"Bearer {token["token"]}"}
+    headers = {"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.1", "Authorization": f"Bearer {token['token']}"}
     if metadata.get("show", False):
         match = re.findall(r"([\w\s]+)\s\((\d{4})\)", metadata["show"])[0]
-        name = f"{match[0]} ({match[1]}) - {metadata["title"]}"
+        name = f"{match[0]} ({match[1]}) - {metadata['title']}"
     else:
         name = metadata["title"]
     response = requests.get(f"https://api.opensubtitles.com/api/v1/utilities/guessit?filename={name}", headers=headers)
@@ -421,7 +422,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
     try:
         ffprobe = Ffprobe.from_dict(ffprobedict)
     except Exception as e:
-        print(f"Error: {err.decode("utf-8")} {e}")
+        print(f"Error: {err.decode('utf-8')} {e}")
         return
     if ffprobe.streams is None:
         print(f"Error: {file} has no streams")
@@ -677,7 +678,7 @@ def api_login(config: str) -> str:
 def logout(token):
     requests.delete(
         "https://api.opensubtitles.com/api/v1/logout",
-        headers={"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token["token"]}"},
+        headers={"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token['token']}"},
     )
 
 
