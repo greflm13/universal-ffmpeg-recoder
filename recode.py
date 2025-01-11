@@ -14,6 +14,7 @@ import urllib.parse
 from subprocess import Popen, PIPE, STDOUT
 
 import requests
+import survey
 
 from colorama import init as colorama_init
 from colorama import Fore as Color
@@ -105,7 +106,11 @@ def get_series_from_tvdb(series: str, token: str, lang: str) -> list:
     response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}&language={lang}", timeout=10, headers=headers)
     if response.status_code != 200:
         response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers=headers)
-    seriesid = response.json()["data"][0]["id"].removeprefix("series-")
+    res = response.json()["data"]
+    choices = [f"{serie['slug'].ljust(30)[:30]}: {serie['overviews'].get(lang, serie['overview'])[:180]}" for serie in res]
+    choice = survey.routines.select("Select TV Show: ", options=choices)
+    print(choice)
+    seriesid = response.json()["data"][choice]["id"].removeprefix("series-")
     response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/default/{lang}?page=0", timeout=10, headers=headers)
     data = response.json()["data"]
     returnlst: list = data["episodes"]
@@ -173,7 +178,7 @@ def get_episode_name(series: str, file: str, seriesobj: list):
 
 
 def recode_series(folder: str, apitokens: dict | None, lang: str, subdir: str = "", codec: str = "h265", bit: int = 10):
-    if apitokens == None:
+    if apitokens is None:
         apitokens = {"thetvdb": None}
     series = os.path.basename(folder)
     parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
@@ -181,7 +186,7 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, subdir: str = 
     if year != "":
         series = f"{seriesname} ({year})"
     for dire in sorted(os.listdir(folder)):
-        if os.path.isdir(dire):
+        if os.path.isdir(os.path.join(folder, dire)):
             for file in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
                 season, name, metadata = get_episode_name(series, file, seriesobj)
                 if name is not None:
@@ -705,7 +710,7 @@ def main():
     )
     parser.add_argument("-i", "--input", help="File to recode", type=str, required=False, dest="inputfile", metavar="FILE")
     parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIR")
-    parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename"], required=True, dest="contentype", metavar="TYPE")
+    parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename", "seriesdir"], required=True, dest="contentype", metavar="TYPE")
     parser.add_argument("-a", "--no-api", help="Disable Metadata and Subtitle APIs", default=False, action="store_true", dest="apis")
     parser.add_argument("-s", "--subtitle", help="Directory containing Subtitles", required=False, default="", dest="subdir", metavar="DIR")
     parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265", "av1"], dest="codec", metavar="CODEC", default="av1")
@@ -731,13 +736,26 @@ def main():
                 raise FileNotFoundError(error)
         elif args.inputdir:
             if os.path.isdir(args.inputdir):
-                for file in os.listdir(args.inputdir):
-                    recode(file=file, apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
+                for subdir in os.listdir(args.inputdir):
+                    recode(file=subdir, apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
         else:
             print("error: inputfile or directory required if type is film")
+            sys.exit()
+    elif args.contentype == "seriesdir":
+        if args.inputdir:
+            if os.path.isdir(args.inputdir):
+                for subdir in sorted(os.listdir(args.inputdir)):
+                    recode_series(
+                        os.path.join(os.path.realpath(args.inputdir), subdir), apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit)
+                    )
+            else:
+                error = f'Directory "{args.inputdir}" does not exist'
+                raise FileNotFoundError(error)
+        else:
+            print("error: inputdirectory required if type is seriesdir")
             sys.exit()
     elif args.contentype == "series":
         if args.inputdir:
@@ -757,13 +775,13 @@ def main():
             series = f"{seriesname} ({year})"
         for dire in sorted(os.listdir(folder)):
             if os.path.isdir(dire):
-                for file in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
-                    season, name, metadata = get_episode_name(series, file, seriesobj)
+                for subdir in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
+                    season, name, metadata = get_episode_name(series, subdir, seriesobj)
                     if name is not None:
                         if not os.path.exists(os.path.join(parentfolder, series, season)):
                             os.makedirs(os.path.join(parentfolder, series, season))
-                        old = os.path.join(folder, dire, file)
-                        new = os.path.splitext(os.path.join(parentfolder, series, season, name))[0] + os.path.splitext(file)[1]
+                        old = os.path.join(folder, dire, subdir)
+                        new = os.path.splitext(os.path.join(parentfolder, series, season, name))[0] + os.path.splitext(subdir)[1]
                         if old != new:
                             print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                             shutil.move(old, new)
