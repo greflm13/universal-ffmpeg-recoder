@@ -251,7 +251,7 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
 
 
 def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list):
-    if stream.codec_name in ["ac3", "eac3", "truehd", "dts"]:
+    if stream.codec_name in ["ac3", "eac3", "truehd", "dts", "opus"]:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
         printlines.append(
