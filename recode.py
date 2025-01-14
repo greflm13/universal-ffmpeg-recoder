@@ -34,7 +34,7 @@ VIDEO_CONTAINERS = [
 ]
 # fmt: on
 
-AUDIO_PRIORITY = {"dts": 5, "opus": 4, "truehd": 3, "eac3": 2, "ac3": 1}
+AUDIO_PRIORITY = {"dts": 6, "flac": 5, "opus": 4, "truehd": 3, "eac3": 2, "ac3": 1}
 SUBTITLE_PRIORITY = {"full": 3, "sdh": 2, "none": 1}
 if os.path.exists("/usr/lib/libamfrt64.so"):
     HWACC = "AMF"
@@ -107,9 +107,8 @@ def get_series_from_tvdb(series: str, token: str, lang: str) -> list:
     if response.status_code != 200:
         response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers=headers)
     res = response.json()["data"]
-    choices = [f"{serie['slug'].ljust(30)[:30]}: {serie['overviews'].get(lang, serie['overview'])[:180]}" for serie in res]
+    choices = [f"{serie['slug'].ljust(30)[:30]} {serie.get('year')}: {serie.get('overviews', {}).get(lang, serie.get('overview', ''))[:180]}" for serie in res]
     choice = survey.routines.select("Select TV Show: ", options=choices)
-    print(choice)
     seriesid = response.json()["data"][choice]["id"].removeprefix("series-")
     response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/default/{lang}?page=0", timeout=10, headers=headers)
     data = response.json()["data"]
@@ -251,7 +250,7 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
 
 
 def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list):
-    if stream.codec_name in ["ac3", "eac3", "truehd", "dts", "opus"]:
+    if stream.codec_name in AUDIO_PRIORITY.keys():
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
         printlines.append(
@@ -481,30 +480,36 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
             subfile = [fil for fil in files if episode in fil]
             if len(subfile) == 1:
                 subfile = os.path.join(subdir, subfile[0])
+                if os.path.isdir(subfile):
+                    subfil = os.listdir(subfile)
+                    subfile = [os.path.join(subfile, fil) for fil in subfil]
+                else:
+                    subfile = [subfile]
         else:
-            subfile = get_subtitles_from_ost(token=apitokens["opensub"], metadata=metadata, lang=lang, file=file)
+            subfile = [get_subtitles_from_ost(token=apitokens["opensub"], metadata=metadata, lang=lang, file=file)]
         try:
-            p = Popen(
-                ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", subfile, "-strict", "-2"],
-                stdout=PIPE,
-                stderr=PIPE,
-            )
-            out, err = p.communicate()
-            output = json.loads(out.decode("utf-8"))
-            ffprobedict = rename_keys_to_lower(output)
-            try:
-                sub = Ffprobe.from_dict(ffprobedict)
-            except Exception:
-                ...
-            prelines.append(f"{Color.RED}Adding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(subfile)}{Style.RESET_ALL}")
-            ffmpeg_command.extend(["-i", subfile])
-            for stream in sub.streams:
-                if stream.tags is None:
-                    stream.tags = StreamTags.from_dict({"title": None, "language": lang})
-                midlines.append(
-                    f"{Color.BLUE}1:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
+            for fil in subfile:
+                p = Popen(
+                    ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", fil, "-strict", "-2"],
+                    stdout=PIPE,
+                    stderr=PIPE,
                 )
-                sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, file=1)
+                out, err = p.communicate()
+                output = json.loads(out.decode("utf-8"))
+                ffprobedict = rename_keys_to_lower(output)
+                try:
+                    sub = Ffprobe.from_dict(ffprobedict)
+                except Exception:
+                    ...
+                prelines.append(f"{Color.RED}Adding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(fil)}{Style.RESET_ALL}")
+                ffmpeg_command.extend(["-i", fil])
+                for stream in sub.streams:
+                    if stream.tags is None:
+                        stream.tags = StreamTags.from_dict({"title": None, "language": lang})
+                    midlines.append(
+                        f"{Color.BLUE}1:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
+                    )
+                    sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, file=1)
         except Exception:
             ...
 
