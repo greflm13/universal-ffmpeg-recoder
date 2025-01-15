@@ -81,8 +81,12 @@ def get_movie_name(file: str, token: str, lang: str):
                         comment = ret["overviews"]["eng"]
                     if "first_air_time" in ret and ret["first_air_time"] != "":
                         date = ret["first_air_time"]
-                    metadata = {"comment": comment, "title": ret["extended_title"], "date": date}
-                    output_file = f"{ret['extended_title']}.mkv"
+                    if "translations" in ret and lang in ret["translations"]:
+                        metadata = {"comment": comment, "title": f"{ret['translations'][lang]} ({ret['year']})", "date": date}
+                        output_file = f"{ret['translations'][lang]} ({ret['year']}).mkv"
+                    else:
+                        metadata = {"comment": comment, "title": ret["extended_title"], "date": date}
+                        output_file = f"{ret['extended_title']}.mkv"
                 except IndexError:
                     metadata = {"title": f"{movie_name}({year})"}
             else:
