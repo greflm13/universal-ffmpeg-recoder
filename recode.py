@@ -74,7 +74,11 @@ def get_movie_name(file: str, token: str, lang: str):
                         f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"}
                     )
                 try:
-                    ret = response.json()["data"][0]
+                    ret = response.json()["data"]
+                    if len(ret) > 1:
+                        choices = [f"{movie['slug'].ljust(30)[:30]} {movie.get('year')}: {movie.get('overviews', {}).get(lang, movie.get('overview', ''))[:180]}" for movie in ret]
+                        choice = survey.routines.select("Select Movie: ", options=choices)
+                    ret = ret[choice]
                     if "overviews" in ret and lang in ret["overviews"]:
                         comment = ret["overviews"][lang]
                     elif "overviews" in ret and "eng" in ret["overviews"]:
