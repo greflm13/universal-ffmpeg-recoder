@@ -180,12 +180,12 @@ def get_episode_name(series: str, file: str, seriesobj: list):
     return None, None, None
 
 
-def recode_series(folder: str, apitokens: dict | None, lang: str, subdir: str = "", codec: str = "h265", bit: int = 10):
+def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str, subdir: str = "", codec: str = "h265", bit: int = 10):
     if apitokens is None:
         apitokens = {"thetvdb": None}
     series = os.path.basename(folder)
     parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
-    seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=lang)
+    seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=infolang)
     if year != "":
         series = f"{seriesname} ({year})"
     for dire in sorted(os.listdir(folder)):
@@ -253,7 +253,7 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
     return vrecoding, vindex, stream.pix_fmt
 
 
-def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list):
+def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list, lang: str = "eng"):
     if stream.codec_name in AUDIO_PRIORITY.keys():
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
@@ -272,14 +272,16 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
     obj["newindex"] = aindex
     astreams.append(obj)
 
-    if stream.tags.language in ["eng", "und", "jpn", None]:
-        update_audio_default(adefault, stream, aindex)
+    if stream.tags.language in ["eng", "und", "jpn", None, lang]:
+        update_audio_default(adefault, stream, aindex, lang)
     return arecoding
 
 
-def update_audio_default(adefault: dict, stream: Stream, aindex: int):
-    if (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0)) or (
-        AUDIO_PRIORITY.get(stream.codec_name, 0) == AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels > adefault["channels"]
+def update_audio_default(adefault: dict, stream: Stream, aindex: int, lang: str = "eng"):
+    if (
+        (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0))
+        or (AUDIO_PRIORITY.get(stream.codec_name, 0) == AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels > adefault["channels"])
+        or (adefault["lang"] != lang and stream.tags.language == lang)
     ):
         adefault.update(
             {
@@ -292,11 +294,11 @@ def update_audio_default(adefault: dict, stream: Stream, aindex: int):
         )
 
 
-def audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list):
+def audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list, lang: str = "eng"):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
-    if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None]:
-        arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines)
+    if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None, lang]:
+        arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang)
         aindex += 1
     return arecoding, aindex
 
@@ -368,7 +370,9 @@ def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
     return tmpfile
 
 
-def recode(file: str, lang: str, path: str | None = None, metadata: dict | None = None, apitokens: dict | None = None, subdir: str = "", codec: str = "h265", bit: int = 10):
+def recode(
+    file: str, lang: str, infolang: str, path: str | None = None, metadata: dict | None = None, apitokens: dict | None = None, subdir: str = "", codec: str = "h265", bit: int = 10
+):
     prelines = []
     midlines = []
     printlines = []
@@ -405,7 +409,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
     ffmpeg_command.extend(["ffmpeg", "-v", "error", "-stats", "-hwaccel", "auto", "-strict", "-2", "-i", os.path.realpath(file)])
 
     if path is None:
-        output_file, metadata = get_movie_name(file, apitokens["thetvdb"], lang=lang)
+        output_file, metadata = get_movie_name(file, apitokens["thetvdb"], lang=infolang)
         if output_file is None:
             return
     else:
@@ -467,7 +471,7 @@ def recode(file: str, lang: str, path: str | None = None, metadata: dict | None 
         vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, codec, bit)
 
     for stream in audiostreams:
-        arecoding, aindex = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines)
+        arecoding, aindex = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang)
 
     if aindex == 0:
         for stream in audiostreams:
@@ -712,7 +716,7 @@ def main():
         "-l",
         "--lang",
         help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language",
-        choices=["eng", "deu"],
+        choices=["eng", "deu", "spa", "jpn"],
         default="eng",
         dest="lang",
         metavar="LANG",
@@ -725,9 +729,10 @@ def main():
     parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265", "av1"], dest="codec", metavar="CODEC", default="av1")
     parser.add_argument("-b", "--bit", help="Select bit depth", required=False, choices=["8", "10"], dest="bit", metavar="BIT", default="10")
     parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
+    parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=["eng", "deu"], dest="infolang")
     args = parser.parse_args()
 
-    if args.hwaccel == False:
+    if args.hwaccel is False:
         global HWACC
         HWACC = None
 
@@ -736,17 +741,22 @@ def main():
     else:
         apitokens = None
 
+    if not args.infolang:
+        infolang = args.lang
+    else:
+        infolang = args.infolang
+
     if args.contentype == "film":
         if args.inputfile:
             if os.path.isfile(args.inputfile):
-                recode(file=args.inputfile, apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
+                recode(file=args.inputfile, apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
                 raise FileNotFoundError(error)
         elif args.inputdir:
             if os.path.isdir(args.inputdir):
                 for subdir in os.listdir(args.inputdir):
-                    recode(file=subdir, apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
+                    recode(file=subdir, apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
@@ -758,7 +768,13 @@ def main():
             if os.path.isdir(args.inputdir):
                 for subdir in sorted(os.listdir(args.inputdir)):
                     recode_series(
-                        os.path.join(os.path.realpath(args.inputdir), subdir), apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit)
+                        os.path.join(os.path.realpath(args.inputdir), subdir),
+                        apitokens=apitokens,
+                        lang=args.lang,
+                        infolang=infolang,
+                        subdir=args.subdir,
+                        codec=args.codec,
+                        bit=int(args.bit),
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -769,17 +785,17 @@ def main():
     elif args.contentype == "series":
         if args.inputdir:
             if os.path.isdir(args.inputdir):
-                recode_series(args.inputdir, apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
+                recode_series(args.inputdir, apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
         else:
-            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
+            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
     elif args.contentype == "rename":
         folder = os.getcwd()
         series = os.path.basename(folder)
         parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
-        seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=args.lang)
+        seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=infolang)
         if year != "":
             series = f"{seriesname} ({year})"
         for dire in sorted(os.listdir(folder)):
