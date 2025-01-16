@@ -78,6 +78,8 @@ def get_movie_name(file: str, token: str, lang: str):
                     if len(ret) > 1:
                         choices = [f"{movie['slug'].ljust(30)[:30]} {movie.get('year')}: {movie.get('overviews', {}).get(lang, movie.get('overview', ''))[:180]}" for movie in ret]
                         choice = survey.routines.select("Select Movie: ", options=choices)
+                    else:
+                        choice = 0
                     ret = ret[choice]
                     if "overviews" in ret and lang in ret["overviews"]:
                         comment = ret["overviews"][lang]
