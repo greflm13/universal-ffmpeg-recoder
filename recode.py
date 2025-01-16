@@ -56,7 +56,7 @@ def rename_keys_to_lower(iterable):
     return iterable
 
 
-def get_movie_name(file: str, token: str, lang: str):
+def get_movie_name(file: str, token: str, lang: str, stype: str = "single"):
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
             match = re.search(pattern=r"\d{4}", string=file)
@@ -75,7 +75,7 @@ def get_movie_name(file: str, token: str, lang: str):
                     )
                 try:
                     ret = response.json()["data"]
-                    if len(ret) > 1:
+                    if len(ret) > 1 and stype == "single":
                         choices = [f"{movie['slug'].ljust(30)[:30]} {movie.get('year')}: {movie.get('overviews', {}).get(lang, movie.get('overview', ''))[:180]}" for movie in ret]
                         choice = survey.routines.select("Select Movie: ", options=choices)
                     else:
@@ -206,6 +206,7 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str,
                         path=os.path.join(parentfolder, series, season, name),
                         metadata=metadata,
                         lang=lang,
+                        infolang=infolang,
                         apitokens=apitokens,
                         subdir=subdir,
                         codec=codec,
@@ -221,6 +222,7 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str,
                     path=os.path.join(parentfolder, series, season, name),
                     metadata=metadata,
                     lang=lang,
+                    infolang=infolang,
                     apitokens=apitokens,
                     subdir=subdir,
                     codec=codec,
@@ -377,7 +379,16 @@ def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
 
 
 def recode(
-    file: str, lang: str, infolang: str, path: str | None = None, metadata: dict | None = None, apitokens: dict | None = None, subdir: str = "", codec: str = "h265", bit: int = 10
+    file: str,
+    lang: str,
+    infolang: str,
+    path: str | None = None,
+    metadata: dict | None = None,
+    apitokens: dict | None = None,
+    subdir: str = "",
+    codec: str = "h265",
+    bit: int = 10,
+    stype: str = "single",
 ):
     prelines = []
     midlines = []
@@ -415,7 +426,7 @@ def recode(
     ffmpeg_command.extend(["ffmpeg", "-v", "error", "-stats", "-hwaccel", "auto", "-strict", "-2", "-i", os.path.realpath(file)])
 
     if path is None:
-        output_file, metadata = get_movie_name(file, apitokens["thetvdb"], lang=infolang)
+        output_file, metadata = get_movie_name(file, apitokens["thetvdb"], lang=infolang, stype=stype)
         if output_file is None:
             return
     else:
@@ -755,14 +766,14 @@ def main():
     if args.contentype == "film":
         if args.inputfile:
             if os.path.isfile(args.inputfile):
-                recode(file=args.inputfile, apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
+                recode(file=args.inputfile, apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit), stype="single")
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
                 raise FileNotFoundError(error)
         elif args.inputdir:
             if os.path.isdir(args.inputdir):
                 for subdir in os.listdir(args.inputdir):
-                    recode(file=subdir, apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
+                    recode(file=subdir, apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit), stype="multi")
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
