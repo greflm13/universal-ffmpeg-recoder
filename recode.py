@@ -357,9 +357,9 @@ def subtitles(
         obj = stream.to_dict()
         obj["newindex"] = sindex
         sstreams.append(obj)
-        dispositions = update_subtitle_default(sdefault, stream, sindex, dispositions)
+        update_subtitle_default(sdefault, stream, sindex, dispositions)
         sindex += 1
-    return sindex, dispositions
+    return sindex
 
 
 def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[dict[str, str | list[str]]]):
@@ -396,7 +396,6 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
             dispositions.get(stype + str(sindex))["types"].append("hearing_impaired")
         else:
             dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["hearing_impaired"]}
-    return dispositions
 
 
 def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
@@ -554,7 +553,7 @@ def recode(
             aindex += 1
 
     for stream in subtitlestreams:
-        sindex, dispositions = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions)
+        sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions)
 
     if sindex == 0:
         if subdir != "" and os.path.isdir(subdir):
@@ -621,24 +620,16 @@ def recode(
 
     if aindex > 0 and adefault["aindex"] is not None:
         for stream in astreams:
-            if adefault["aindex"] != stream["newindex"]:
+            if adefault["aindex"] != stream["newindex"] and not dispositions.get("a" + str(stream["newindex"]), False):
                 ffmpeg_dispositions.extend([f"-disposition:a:{stream['newindex']}", "none"])
-            elif stream["disposition"]["default"] == 0:
-                ffmpeg_dispositions.extend([f"-disposition:a:{adefault['aindex']}", "default"])
-                printlines.append(
-                    f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}a:{adefault['aindex']}{Style.RESET_ALL} titled {Color.CYAN}{adefault['title']}{Style.RESET_ALL} language {Color.MAGENTA}{adefault['lang']}{Style.RESET_ALL} to default"
-                )
-                changedefault = True
+            elif adefault["aindex"] == stream["newindex"] and dispositions.get("a" + str(stream["newindex"]), False):
+                dispositions["a" + str(stream["newindex"])]["types"].append("default")
     if sindex > 0 and sdefault["sindex"] is not None:
         for stream in sstreams:
-            if sdefault["sindex"] != stream["newindex"]:
+            if sdefault["sindex"] != stream["newindex"] and not dispositions.get("s" + str(stream["newindex"]), False):
                 ffmpeg_dispositions.extend([f"-disposition:s:{stream['newindex']}", "none"])
-            elif stream["disposition"]["default"] == 0:
-                ffmpeg_dispositions.extend([f"-disposition:s:{sdefault['sindex']}", "default"])
-                printlines.append(
-                    f"Setting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}s:{sdefault['sindex']}{Style.RESET_ALL} titled {Color.CYAN}{sdefault['title']}{Style.RESET_ALL} language {Color.MAGENTA}{sdefault['lang']}{Style.RESET_ALL} to default"
-                )
-                changedefault = True
+            elif sdefault["sindex"] == stream["newindex"] and dispositions.get("s" + str(stream["newindex"]), False):
+                dispositions["s" + str(stream["newindex"])]["types"].append("default")
 
     if len(changealang) > 0:
         for change in changealang:
@@ -649,13 +640,13 @@ def recode(
             changedefault = True
 
     for disposition in dispositions.values():
-        for dispo in disposition["types"]:
-            typ = "subtitle" if {disposition["stype"]} == "s" else "audio"
-            ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", dispo])
-            printlines.append(
-                f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{disposition['title']}{Style.RESET_ALL} language {Color.MAGENTA}{disposition['lang']}{Style.RESET_ALL} to {Color.YELLOW}{dispo}{Style.RESET_ALL}"
-            )
-            changedefault = True
+        dispo = "+".join(disposition["types"])
+        typ = "subtitle" if {disposition["stype"]} == "s" else "audio"
+        ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", dispo])
+        printlines.append(
+            f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{disposition['title']}{Style.RESET_ALL} language {Color.MAGENTA}{disposition['lang']}{Style.RESET_ALL} to {Color.YELLOW}{dispo}{Style.RESET_ALL}"
+        )
+        changedefault = True
 
     try:
         format_tags = ffprobe.format.tags.to_dict()
