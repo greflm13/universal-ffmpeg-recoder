@@ -35,7 +35,7 @@ VIDEO_CONTAINERS = [
 # fmt: on
 
 AUDIO_PRIORITY = {"dts": 6, "flac": 5, "opus": 4, "truehd": 3, "eac3": 2, "ac3": 1}
-SUBTITLE_PRIORITY = {"full": 3, "sdh": 2, "none": 1}
+SUBTITLE_PRIORITY = {"forced": 4, "full": 3, "sdh": 2, "none": 1}
 if os.path.exists("/usr/lib/libamfrt64.so"):
     HWACC = "AMF"
 elif os.path.exists("/usr/lib/libcuda.so"):
@@ -91,7 +91,7 @@ def get_movie_name(file: str, token: str, lang: str, stype: str = "single"):
                         metadata = {"comment": comment, "title": f"{ret['translations'][lang]} ({ret['year']})", "date": date}
                         output_file = f"{ret['translations'][lang].replace('/', '-')} ({ret['year']}).mkv"
                     else:
-                        metadata = {"comment": comment, "title": ret["extended_title"].replace('/', '-'), "date": date}
+                        metadata = {"comment": comment, "title": ret["extended_title"].replace("/", "-"), "date": date}
                         output_file = f"{ret['extended_title']}.mkv"
                 except IndexError:
                     metadata = {"title": f"{movie_name}({year})"}
@@ -166,7 +166,7 @@ def get_episode_name(series: str, file: str, seriesobj: list):
                 else:
                     title = " + ".join(titles)
                 if title != "":
-                    name = f"{series} - S{seasonnum.rjust(2, '0')}{ep} - {title}.mkv"
+                    name = f"{series} - S{seasonnum.rjust(2, '0')}{ep} - {title.replace('/', '-')}.mkv"
                 else:
                     name = f"{series} - S{seasonnum.rjust(2, '0')}{ep}.mkv"
                 season = f"Season {seasonnum.rjust(2, '0')}"
@@ -282,13 +282,14 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
 
     if stream.tags.language in ["eng", "und", "jpn", None, lang]:
         update_audio_default(adefault, stream, aindex, lang)
+
     return arecoding
 
 
 def update_audio_default(adefault: dict, stream: Stream, aindex: int, lang: str = "eng"):
     if (
-        (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0))
-        or (AUDIO_PRIORITY.get(stream.codec_name, 0) == AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels > adefault["channels"])
+        (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.tags.language == lang)
+        or (AUDIO_PRIORITY.get(stream.codec_name, 0) == AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels > adefault["channels"] and stream.tags.language == lang)
         or (adefault["lang"] != lang and stream.tags.language == lang)
     ):
         adefault.update(
@@ -298,20 +299,45 @@ def update_audio_default(adefault: dict, stream: Stream, aindex: int, lang: str 
                 "lang": stream.tags.language,
                 "oindex": stream.index,
                 "channels": stream.channels,
+                "title": stream.tags.title,
             }
         )
 
 
-def audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list, lang: str = "eng"):
+def audio(
+    stream: Stream,
+    ffmpeg_mapping: list,
+    ffmpeg_recoding: list,
+    arecoding: bool,
+    aindex: int,
+    adefault: dict,
+    astreams: list,
+    printlines: list,
+    changealang: list,
+    lang: str = "eng",
+):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
+    if stream.tags.language in ["und", None]:
+        changealang.append({"index": aindex, "lang": lang})
+        stream.tags.language = lang
     if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None, lang]:
         arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang)
         aindex += 1
-    return arecoding, aindex
+    return arecoding, aindex, changealang
 
 
-def subtitles(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, sindex: int, sdefault: dict, sstreams: list, printlines: list, file=0):
+def subtitles(
+    stream: Stream,
+    ffmpeg_mapping: list,
+    ffmpeg_recoding: list,
+    sindex: int,
+    sdefault: dict,
+    sstreams: list,
+    printlines: list,
+    dispositions: dict[dict[str, str | list[str]]],
+    file=0,
+):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
     if stream.tags.language in ["eng", "ger", "deu", "und", None]:
@@ -331,12 +357,12 @@ def subtitles(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, sinde
         obj = stream.to_dict()
         obj["newindex"] = sindex
         sstreams.append(obj)
-        update_subtitle_default(sdefault, stream, sindex)
+        dispositions = update_subtitle_default(sdefault, stream, sindex, dispositions)
         sindex += 1
-    return sindex
+    return sindex, dispositions
 
 
-def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int):
+def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[dict[str, str | list[str]]]):
     subtitle_type = "none"
     if stream.tags.title:
         title_lower = stream.tags.title.lower()
@@ -344,8 +370,38 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int):
             subtitle_type = "full"
         elif "sdh" in title_lower:
             subtitle_type = "sdh"
-    if SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0):
-        sdefault.update({"lang": stream.tags.language, "oindex": stream.index, "sindex": sindex, "type": subtitle_type})
+        elif "forced" in title_lower:
+            subtitle_type = "forced"
+    if SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0) or stream.disposition.forced:
+        sdefault.update(
+            {
+                "lang": stream.tags.language,
+                "oindex": stream.index,
+                "sindex": sindex,
+                "type": subtitle_type if not stream.disposition.forced else "forced",
+                "title": stream.tags.title,
+            }
+        )
+
+        #     if disposition in dispositions:
+        # for dispo in disposition["types"]:
+        #     typ = "subtitle" if {disposition["stype"]} == "s" else "audio"
+        #     ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", dispo])
+
+    if subtitle_type == "forced" and not stream.disposition.forced:
+        stype = "s"
+        if dispositions.get(stype + str(sindex), False):
+            dispositions.get(stype + str(sindex))["types"].append("forced")
+        else:
+            dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "types": ["forced"]}
+        stream.disposition.forced = True
+    if subtitle_type == "sdh" and not stream.disposition.hearing_impaired:
+        stype = "s"
+        if dispositions.get(stype + str(sindex), False):
+            dispositions.get(stype + str(sindex))["types"].append("hearing_impaired")
+        else:
+            dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "types": ["hearing_impaired"]}
+    return dispositions
 
 
 def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
@@ -371,9 +427,11 @@ def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
     link = response.json()["link"]
     filename = response.json()["file_name"]
     response = requests.get(link, headers=headers)
-    content = response.content
-    fd, tmpfile = tempfile.mkstemp(suffix=os.path.splitext(filename)[1])
-    with open(tmpfile, "wb") as f:
+    content = response.text
+    if content == "":
+        return None
+    _, tmpfile = tempfile.mkstemp(suffix=os.path.splitext(filename)[1])
+    with open(tmpfile, "w") as f:
         f.write(content)
     return tmpfile
 
@@ -394,13 +452,16 @@ def recode(
     midlines = []
     printlines = []
 
-    adefault = {"aindex": None, "codec": None, "lang": None, "channels": None}
-    sdefault = {"sindex": None, "type": None, "lang": None}
+    adefault = {"aindex": None, "codec": None, "lang": None, "channels": None, "title": None, "oindex": None}
+    sdefault = {"sindex": None, "type": None, "lang": None, "title": None, "oindex": None}
 
     videostreams = []
     audiostreams = []
     subtitlestreams = []
     attachmentstreams = []
+
+    changealang: list[dict[str, str]] = []
+    dispositions: dict[dict[str, str | list[str]]] = {}
 
     astreams = []
     sstreams = []
@@ -484,11 +545,13 @@ def recode(
             )
             attachmentstreams.append(stream)
 
+    printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------")
+
     for stream in videostreams:
         vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, codec, bit)
 
     for stream in audiostreams:
-        arecoding, aindex = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang)
+        arecoding, aindex, changealang = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, changealang, lang)
 
     if aindex == 0:
         for stream in audiostreams:
@@ -496,7 +559,7 @@ def recode(
             aindex += 1
 
     for stream in subtitlestreams:
-        sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines)
+        sindex, dispositions = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions)
 
     if sindex == 0:
         if subdir != "" and os.path.isdir(subdir):
@@ -559,13 +622,17 @@ def recode(
             )
             vindex += 1
 
+    printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------")
+
     if aindex > 0 and adefault["aindex"] is not None:
         for stream in astreams:
             if adefault["aindex"] != stream["newindex"]:
                 ffmpeg_dispositions.extend([f"-disposition:a:{stream['newindex']}", "none"])
             elif stream["disposition"]["default"] == 0:
                 ffmpeg_dispositions.extend([f"-disposition:a:{adefault['aindex']}", "default"])
-                printlines.append(f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}a:{adefault['aindex']}{Style.RESET_ALL} to default")
+                printlines.append(
+                    f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}a:{adefault['aindex']}{Style.RESET_ALL} titled {Color.CYAN}{adefault['title']}{Style.RESET_ALL} language {Color.MAGENTA}{adefault['lang']}{Style.RESET_ALL} to default"
+                )
                 changedefault = True
     if sindex > 0 and sdefault["sindex"] is not None:
         for stream in sstreams:
@@ -573,13 +640,35 @@ def recode(
                 ffmpeg_dispositions.extend([f"-disposition:s:{stream['newindex']}", "none"])
             elif stream["disposition"]["default"] == 0:
                 ffmpeg_dispositions.extend([f"-disposition:s:{sdefault['sindex']}", "default"])
-                printlines.append(f"Setting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}s:{sdefault['sindex']}{Style.RESET_ALL} to default")
+                printlines.append(
+                    f"Setting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}s:{sdefault['sindex']}{Style.RESET_ALL} titled {Color.CYAN}{sdefault['title']}{Style.RESET_ALL} language {Color.MAGENTA}{sdefault['lang']}{Style.RESET_ALL} to default"
+                )
                 changedefault = True
+
+    if len(changealang) > 0:
+        for change in changealang:
+            ffmpeg_dispositions.extend([f"-metadata:s:a:{change['index']}", f"language={change['lang']}"])
+            printlines.append(
+                f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}a:{change['index']}{Style.RESET_ALL} language to {Color.MAGENTA}{change['lang']}{Style.RESET_ALL}"
+            )
+            changedefault = True
+
+    for disposition in dispositions.values():
+        for dispo in disposition["types"]:
+            typ = "subtitle" if {disposition["stype"]} == "s" else "audio"
+            ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", dispo])
+            printlines.append(
+                f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{sdefault['title']}{Style.RESET_ALL} language {Color.MAGENTA}{sdefault['lang']}{Style.RESET_ALL} to {Color.YELLOW}{dispo}{Style.RESET_ALL}"
+            )
+            changedefault = True
 
     try:
         format_tags = ffprobe.format.tags.to_dict()
     except AttributeError:
         format_tags = {}
+
+    if changedefault:
+        printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------")
 
     for tag in metadata.keys():
         if metadata[tag] != "" and metadata[tag] is not None:
@@ -601,6 +690,9 @@ def recode(
         print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}{file}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
         shutil.move(os.path.realpath(file), os.path.realpath(output_file))
         return
+
+    if changemetadata:
+        printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------")
 
     fd, tmpfile = tempfile.mkstemp(suffix=".mkv")
 
@@ -683,10 +775,10 @@ def api_login(config: str) -> str:
     conf = configparser.ConfigParser()
     conf.read(config)
 
-    if not "thetvdb" in conf:
+    if "thetvdb" not in conf:
         conf["thetvdb"] = {}
         conf["thetvdb"]["apikey"] = input('theTVDB api not configured. Please open "https://thetvdb.com/api-information/signup" and paste the api key here: ')
-    if not "opensubtitles" in conf:
+    if "opensubtitles" not in conf:
         conf["opensubtitles"] = {}
         conf["opensubtitles"]["apikey"] = input('OpenSubtitles api not configured. Please open "https://www.opensubtitles.com/consumers" and paste the api key here: ')
         conf["opensubtitles"]["user"] = input("username: ")
@@ -733,7 +825,7 @@ def main():
         "-l",
         "--lang",
         help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language",
-        choices=["eng", "deu", "spa", "jpn"],
+        choices=["eng", "deu", "spa", "jpn", "ger", "rus", "fin"],
         default="eng",
         dest="lang",
         metavar="LANG",
