@@ -383,24 +383,19 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
             }
         )
 
-        #     if disposition in dispositions:
-        # for dispo in disposition["types"]:
-        #     typ = "subtitle" if {disposition["stype"]} == "s" else "audio"
-        #     ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", dispo])
-
     if subtitle_type == "forced" and not stream.disposition.forced:
         stype = "s"
         if dispositions.get(stype + str(sindex), False):
             dispositions.get(stype + str(sindex))["types"].append("forced")
         else:
-            dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "types": ["forced"]}
+            dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["forced"]}
         stream.disposition.forced = True
     if subtitle_type == "sdh" and not stream.disposition.hearing_impaired:
         stype = "s"
         if dispositions.get(stype + str(sindex), False):
             dispositions.get(stype + str(sindex))["types"].append("hearing_impaired")
         else:
-            dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "types": ["hearing_impaired"]}
+            dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["hearing_impaired"]}
     return dispositions
 
 
@@ -658,7 +653,7 @@ def recode(
             typ = "subtitle" if {disposition["stype"]} == "s" else "audio"
             ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", dispo])
             printlines.append(
-                f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{sdefault['title']}{Style.RESET_ALL} language {Color.MAGENTA}{sdefault['lang']}{Style.RESET_ALL} to {Color.YELLOW}{dispo}{Style.RESET_ALL}"
+                f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{disposition['title']}{Style.RESET_ALL} language {Color.MAGENTA}{disposition['lang']}{Style.RESET_ALL} to {Color.YELLOW}{dispo}{Style.RESET_ALL}"
             )
             changedefault = True
 
