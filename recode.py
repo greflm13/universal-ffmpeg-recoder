@@ -66,13 +66,27 @@ def get_movie_name(file: str, token: str, lang: str, stype: str = "single"):
                 year: str = match.group()
                 movie_name: str = file[: match.start()].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
                 output_file = f"{movie_name}({year}).mkv"
-                response = requests.get(
-                    f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}&language={lang}", timeout=10, headers={"Authorization": f"Bearer {token}"}
-                )
+                succ = False
+                while not succ:
+                    try:
+                        response = requests.get(
+                            f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}&language={lang}",
+                            timeout=10,
+                            headers={"Authorization": f"Bearer {token}"},
+                        )
+                        succ = True
+                    except requests.exceptions.ReadTimeout:
+                        succ = False
                 if response.status_code != 200:
-                    response = requests.get(
-                        f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"}
-                    )
+                    succ = False
+                    while not succ:
+                        try:
+                            response = requests.get(
+                                f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"}
+                            )
+                            succ = True
+                        except requests.exceptions.ReadTimeout:
+                            succ = False
                 try:
                     ret = response.json()["data"]
                     if len(ret) > 1 and stype == "single":
@@ -270,11 +284,11 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
         )
     else:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-        ffmpeg_recoding.extend([f"-c:a:{aindex}", "ac3"])
+        ffmpeg_recoding.extend([f"-c:a:{aindex}", "libopus"])
         arecoding = True
-        stream.codec_name = "ac3"
+        stream.codec_name = "opus"
         printlines.append(
-            f"Converting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}ac3{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
+            f"Converting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}opus{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
         )
     obj = stream.to_dict()
     obj["newindex"] = aindex
@@ -624,12 +638,28 @@ def recode(
                 ffmpeg_dispositions.extend([f"-disposition:a:{stream['newindex']}", "none"])
             elif adefault["aindex"] == stream["newindex"] and dispositions.get("a" + str(stream["newindex"]), False):
                 dispositions["a" + str(stream["newindex"])]["types"].append("default")
+            elif adefault["aindex"] == stream["newindex"] and not dispositions.get("a" + str(stream["newindex"]), False) and not stream["disposition"].get("default", False):
+                dispositions["a" + str(stream["newindex"])] = {
+                    "stype": "a",
+                    "index": stream["newindex"],
+                    "title": stream["tags"].get("title", "None"),
+                    "lang": stream["tags"]["language"],
+                    "types": ["default"],
+                }
     if sindex > 0 and sdefault["sindex"] is not None:
         for stream in sstreams:
             if sdefault["sindex"] != stream["newindex"] and not dispositions.get("s" + str(stream["newindex"]), False):
                 ffmpeg_dispositions.extend([f"-disposition:s:{stream['newindex']}", "none"])
             elif sdefault["sindex"] == stream["newindex"] and dispositions.get("s" + str(stream["newindex"]), False):
                 dispositions["s" + str(stream["newindex"])]["types"].append("default")
+            elif sdefault["sindex"] == stream["newindex"] and not dispositions.get("s" + str(stream["newindex"]), False) and not stream["disposition"].get("default", False):
+                dispositions["s" + str(stream["newindex"])] = {
+                    "stype": "s",
+                    "index": stream["newindex"],
+                    "title": stream["tags"].get("title", "None"),
+                    "lang": stream["tags"]["language"],
+                    "types": ["default"],
+                }
 
     if len(changealang) > 0:
         for change in changealang:
@@ -640,11 +670,10 @@ def recode(
             changedefault = True
 
     for disposition in dispositions.values():
-        dispo = "+".join(disposition["types"])
-        typ = "subtitle" if {disposition["stype"]} == "s" else "audio"
-        ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", dispo])
+        typ = "subtitle" if disposition["stype"] == "s" else "audio"
+        ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", "+".join(disposition["types"])])
         printlines.append(
-            f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{disposition['title']}{Style.RESET_ALL} language {Color.MAGENTA}{disposition['lang']}{Style.RESET_ALL} to {Color.YELLOW}{dispo}{Style.RESET_ALL}"
+            f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{disposition['title']}{Style.RESET_ALL} language {Color.MAGENTA}{disposition['lang']}{Style.RESET_ALL} to {Color.YELLOW}{' '.join(disposition['types'])}{Style.RESET_ALL}"
         )
         changedefault = True
 
