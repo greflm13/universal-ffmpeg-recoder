@@ -35,7 +35,7 @@ VIDEO_CONTAINERS = [
 # fmt: on
 
 AUDIO_PRIORITY = {"dts": 6, "flac": 5, "opus": 4, "truehd": 3, "eac3": 2, "ac3": 1}
-SUBTITLE_PRIORITY = {"forced": 4, "full": 3, "sdh": 2, "none": 1}
+SUBTITLE_PRIORITY = {"forced": 4, "full": 3, "none": 1}
 if os.path.exists("/usr/lib/libamfrt64.so"):
     HWACC = "AMF"
 elif os.path.exists("/usr/lib/libcuda.so"):
@@ -59,13 +59,15 @@ def rename_keys_to_lower(iterable):
 def get_movie_name(file: str, token: str, lang: str, stype: str = "single"):
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
-            match = re.search(pattern=r"\d{4}", string=file)
+            match = re.search(pattern=r"(.*)(\d{4}(?!p))", string=file)
             if match:
                 comment = None
                 date = None
-                year: str = match.group()
-                movie_name: str = file[: match.start()].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
+                year: str = match.groups()[1]
+                movie_name: str = match.groups()[0].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
                 output_file = f"{movie_name}({year}).mkv"
+                if token is None:
+                    return output_file, {"title": f"{movie_name}({year})"}
                 succ = False
                 while not succ:
                     try:
@@ -200,7 +202,7 @@ def get_episode_name(series: str, file: str, seriesobj: list):
     return None, None, None
 
 
-def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str, subdir: str = "", codec: str = "h265", bit: int = 10):
+def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str, sublang: str, subdir: str = "", codec: str = "h265", bit: int = 10):
     if apitokens is None:
         apitokens = {"thetvdb": None}
     series = os.path.basename(folder)
@@ -221,6 +223,7 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str,
                         metadata=metadata,
                         lang=lang,
                         infolang=infolang,
+                        sublang=sublang,
                         apitokens=apitokens,
                         subdir=subdir,
                         codec=codec,
@@ -237,6 +240,7 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str,
                     metadata=metadata,
                     lang=lang,
                     infolang=infolang,
+                    sublang=sublang,
                     apitokens=apitokens,
                     subdir=subdir,
                     codec=codec,
@@ -350,11 +354,13 @@ def subtitles(
     sstreams: list,
     printlines: list,
     dispositions: dict[dict[str, str | list[str]]],
+    lang: str,
     file=0,
 ):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
     if stream.tags.language in ["eng", "ger", "deu", "und", None]:
+        stream.tags.language = "ger" if stream.tags.language == "deu" else stream.tags.language
         if stream.codec_name in ["subrip", "hdmv_pgs_subtitle", "ass", "dvd_subtitle"]:
             ffmpeg_mapping.extend(["-map", f"{file}:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:s:{sindex}", "copy"])
@@ -371,12 +377,12 @@ def subtitles(
         obj = stream.to_dict()
         obj["newindex"] = sindex
         sstreams.append(obj)
-        update_subtitle_default(sdefault, stream, sindex, dispositions)
+        update_subtitle_default(sdefault, stream, sindex, dispositions, lang)
         sindex += 1
     return sindex
 
 
-def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[dict[str, str | list[str]]]):
+def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[dict[str, str | list[str]]], lang: str):
     subtitle_type = "none"
     if stream.tags.title:
         title_lower = stream.tags.title.lower()
@@ -386,7 +392,9 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
             subtitle_type = "sdh"
         elif "forced" in title_lower:
             subtitle_type = "forced"
-    if SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0) or stream.disposition.forced:
+    if (stream.tags.language == lang or stream.tags.language is None) and (
+        SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0) or stream.disposition.forced
+    ):
         sdefault.update(
             {
                 "lang": stream.tags.language,
@@ -397,14 +405,14 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
             }
         )
 
-    if subtitle_type == "forced" and not stream.disposition.forced:
+    if subtitle_type == "forced":
         stype = "s"
         if dispositions.get(stype + str(sindex), False):
             dispositions.get(stype + str(sindex))["types"].append("forced")
         else:
             dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["forced"]}
         stream.disposition.forced = True
-    if subtitle_type == "sdh" and not stream.disposition.hearing_impaired:
+    if subtitle_type == "sdh":
         stype = "s"
         if dispositions.get(stype + str(sindex), False):
             dispositions.get(stype + str(sindex))["types"].append("hearing_impaired")
@@ -413,6 +421,8 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
 
 
 def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
+    if token is None:
+        return None
     headers = {"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.1", "Authorization": f"Bearer {token['token']}"}
     if metadata.get("show", False):
         match = re.findall(r"([\w\s]+)\s\((\d{4})\)", metadata["show"])[0]
@@ -448,6 +458,7 @@ def recode(
     file: str,
     lang: str,
     infolang: str,
+    sublang: str,
     path: str | None = None,
     metadata: dict | None = None,
     apitokens: dict | None = None,
@@ -493,6 +504,9 @@ def recode(
     subfile = ""
 
     ffmpeg_command.extend(["ffmpeg", "-v", "error", "-stats", "-hwaccel", "auto", "-strict", "-2", "-i", os.path.realpath(file)])
+
+    if apitokens is None:
+        apitokens = {"thetvdb": None}
 
     if path is None:
         output_file, metadata = get_movie_name(file, apitokens["thetvdb"], lang=infolang, stype=stype)
@@ -567,7 +581,7 @@ def recode(
             aindex += 1
 
     for stream in subtitlestreams:
-        sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions)
+        sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions, sublang)
 
     if sindex == 0:
         if subdir != "" and os.path.isdir(subdir):
@@ -582,7 +596,7 @@ def recode(
                 else:
                     subfile = [subfile]
         else:
-            subfile = [get_subtitles_from_ost(token=apitokens["opensub"], metadata=metadata, lang=lang, file=file)]
+            subfile = [get_subtitles_from_ost(token=apitokens.get("opensub", None), metadata=metadata, lang=lang, file=file)]
         try:
             for fil in subfile:
                 p = Popen(
@@ -617,8 +631,8 @@ def recode(
         tindex += 1
 
     for stream in ffprobe.streams:
-        disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
         if stream.codec_type == "video" and stream.codec_name == "mjpeg" and stream.tags.filename == "cover.jpg":
+            disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
             midlines.append(
                 f"{Color.BLUE}0:{stream.index} {Color.GREEN}attached picture {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
             )
@@ -652,12 +666,12 @@ def recode(
                 ffmpeg_dispositions.extend([f"-disposition:s:{stream['newindex']}", "none"])
             elif sdefault["sindex"] == stream["newindex"] and dispositions.get("s" + str(stream["newindex"]), False):
                 dispositions["s" + str(stream["newindex"])]["types"].append("default")
-            elif sdefault["sindex"] == stream["newindex"] and not dispositions.get("s" + str(stream["newindex"]), False) and not stream["disposition"].get("default", False):
+            elif sdefault["sindex"] == stream["newindex"] and not dispositions.get("s" + str(stream["newindex"]), False):
                 dispositions["s" + str(stream["newindex"])] = {
                     "stype": "s",
                     "index": stream["newindex"],
                     "title": stream["tags"].get("title", "None"),
-                    "lang": stream["tags"]["language"],
+                    "lang": stream["tags"].get("language", "und"),
                     "types": ["default"],
                 }
 
@@ -672,10 +686,18 @@ def recode(
     for disposition in dispositions.values():
         typ = "subtitle" if disposition["stype"] == "s" else "audio"
         ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", "+".join(disposition["types"])])
-        printlines.append(
-            f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{disposition['title']}{Style.RESET_ALL} language {Color.MAGENTA}{disposition['lang']}{Style.RESET_ALL} to {Color.YELLOW}{' '.join(disposition['types'])}{Style.RESET_ALL}"
-        )
-        changedefault = True
+        if typ == "subtitle":
+            if "+".join(sorted([k for k, v in sstreams[int(disposition["index"])]["disposition"].items() if v])) != "+".join(sorted(disposition["types"])):
+                printlines.append(
+                    f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{disposition['title']}{Style.RESET_ALL} language {Color.MAGENTA}{disposition['lang']}{Style.RESET_ALL} to {Color.YELLOW}{' '.join(disposition['types'])}{Style.RESET_ALL}"
+                )
+                changedefault = True
+        elif typ == "audio":
+            if "+".join(sorted([k for k, v in astreams[int(disposition["index"])]["disposition"].items() if v])) != "+".join(sorted(disposition["types"])):
+                printlines.append(
+                    f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{disposition['title']}{Style.RESET_ALL} language {Color.MAGENTA}{disposition['lang']}{Style.RESET_ALL} to {Color.YELLOW}{' '.join(disposition['types'])}{Style.RESET_ALL}"
+                )
+                changedefault = True
 
     try:
         format_tags = ffprobe.format.tags.to_dict()
@@ -749,7 +771,7 @@ def recode(
         print(line)
     for line in printlines:
         print(line)
-    # print(" ".join(ffmpeg_command))
+    print(" ".join(ffmpeg_command))
 
     timestart = datetime.datetime.now()
     print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
@@ -854,6 +876,7 @@ def main():
     parser.add_argument("-b", "--bit", help="Select bit depth", required=False, choices=["8", "10"], dest="bit", metavar="BIT", default="10")
     parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
     parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=["eng", "deu"], dest="infolang")
+    parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=["eng", "ger"], dest="sublang")
     args = parser.parse_args()
 
     if args.hwaccel is False:
@@ -870,17 +893,34 @@ def main():
     else:
         infolang = args.infolang
 
+    if not args.sublang:
+        sublang = args.lang
+    else:
+        sublang = args.sublang
+
     if args.contentype == "film":
         if args.inputfile:
             if os.path.isfile(args.inputfile):
-                recode(file=args.inputfile, apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit), stype="single")
+                recode(
+                    file=args.inputfile,
+                    apitokens=apitokens,
+                    lang=args.lang,
+                    infolang=infolang,
+                    sublang=sublang,
+                    subdir=args.subdir,
+                    codec=args.codec,
+                    bit=int(args.bit),
+                    stype="single",
+                )
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
                 raise FileNotFoundError(error)
         elif args.inputdir:
             if os.path.isdir(args.inputdir):
                 for subdir in os.listdir(args.inputdir):
-                    recode(file=subdir, apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit), stype="multi")
+                    recode(
+                        file=subdir, apitokens=apitokens, lang=args.lang, infolang=infolang, sublang=sublang, subdir=args.subdir, codec=args.codec, bit=int(args.bit), stype="multi"
+                    )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
@@ -896,6 +936,7 @@ def main():
                         apitokens=apitokens,
                         lang=args.lang,
                         infolang=infolang,
+                        sublang=sublang,
                         subdir=args.subdir,
                         codec=args.codec,
                         bit=int(args.bit),
@@ -909,12 +950,12 @@ def main():
     elif args.contentype == "series":
         if args.inputdir:
             if os.path.isdir(args.inputdir):
-                recode_series(args.inputdir, apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
+                recode_series(args.inputdir, apitokens=apitokens, lang=args.lang, infolang=infolang, sublang=sublang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
         else:
-            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang, infolang=infolang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
+            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang, infolang=infolang, sublang=sublang, subdir=args.subdir, codec=args.codec, bit=int(args.bit))
     elif args.contentype == "rename":
         folder = os.getcwd()
         series = os.path.basename(folder)
