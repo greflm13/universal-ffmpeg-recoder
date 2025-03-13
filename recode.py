@@ -118,7 +118,7 @@ def get_movie_name(file: str, token: str, lang: str, stype: str = "single"):
     return None, None
 
 
-def get_series_from_tvdb(series: str, token: str, lang: str) -> list:
+def get_series_from_tvdb(series: str, token: str, lang: str) -> tuple[list, str, str]:
     headers = {"Authorization": f"Bearer {token}"}
     match = re.search(r"\((\d{4})\)", series)
     try:
@@ -136,6 +136,7 @@ def get_series_from_tvdb(series: str, token: str, lang: str) -> list:
     choices = [f"{serie['slug'].ljust(30)[:30]} {serie.get('year')}: {serie.get('overviews', {}).get(lang, serie.get('overview', ''))[:180]}" for serie in res]
     choice = survey.routines.select("Select TV Show: ", options=choices)
     seriesid = response.json()["data"][choice]["id"].removeprefix("series-")
+    # response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/dvd/{lang}?page=0", timeout=10, headers=headers)
     response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/default/{lang}?page=0", timeout=10, headers=headers)
     data = response.json()["data"]
     returnlst: list = data["episodes"]
@@ -153,7 +154,7 @@ def get_series_from_tvdb(series: str, token: str, lang: str) -> list:
     return returnlst, name, year
 
 
-def get_episode_name(series: str, file: str, seriesobj: list):
+def get_episode_name(series: str, file: str, seriesobj: list) -> tuple[str | None, str | None, dict[str, str] | None]:
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
             match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})*)", file)
@@ -190,7 +191,7 @@ def get_episode_name(series: str, file: str, seriesobj: list):
                     comment = " ".join(comments)
                 except TypeError:
                     comment = None
-                metadata = {
+                metadata: dict[str, str] = {
                     "episode_id": ", ".join(epi.removeprefix("0") for epi in episodes),
                     "season_number": seasonnum.removeprefix("0"),
                     "show": series,
@@ -306,8 +307,8 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
 
 def update_audio_default(adefault: dict, stream: Stream, aindex: int, lang: str = "eng"):
     if (
-        (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.tags.language == lang)
-        or (AUDIO_PRIORITY.get(stream.codec_name, 0) == AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels > adefault["channels"] and stream.tags.language == lang)
+        (stream.channels > adefault["channels"] and stream.tags.language == lang)
+        or (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels == adefault["channels"] and stream.tags.language == lang)
         or (adefault["lang"] != lang and stream.tags.language == lang)
     ):
         adefault.update(
@@ -392,9 +393,7 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
             subtitle_type = "sdh"
         elif "forced" in title_lower:
             subtitle_type = "forced"
-    if (stream.tags.language == lang or stream.tags.language is None) and (
-        SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0) or stream.disposition.forced
-    ):
+    if (stream.tags.language == lang or stream.tags.language is None) and (SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0)):
         sdefault.update(
             {
                 "lang": stream.tags.language,
@@ -405,14 +404,14 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
             }
         )
 
-    if subtitle_type == "forced":
+    if subtitle_type == "forced" or stream.disposition.forced:
         stype = "s"
         if dispositions.get(stype + str(sindex), False):
             dispositions.get(stype + str(sindex))["types"].append("forced")
         else:
             dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["forced"]}
         stream.disposition.forced = True
-    if subtitle_type == "sdh":
+    if subtitle_type == "sdh" or stream.disposition.hearing_impaired:
         stype = "s"
         if dispositions.get(stype + str(sindex), False):
             dispositions.get(stype + str(sindex))["types"].append("hearing_impaired")
@@ -471,7 +470,7 @@ def recode(
     midlines = []
     printlines = []
 
-    adefault = {"aindex": None, "codec": None, "lang": None, "channels": None, "title": None, "oindex": None}
+    adefault = {"aindex": None, "codec": None, "lang": None, "channels": 0, "title": None, "oindex": None}
     sdefault = {"sindex": None, "type": None, "lang": None, "title": None, "oindex": None}
 
     videostreams = []
@@ -771,7 +770,7 @@ def recode(
         print(line)
     for line in printlines:
         print(line)
-    print(" ".join(ffmpeg_command))
+    # print(" ".join(ffmpeg_command))
 
     timestart = datetime.datetime.now()
     print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
