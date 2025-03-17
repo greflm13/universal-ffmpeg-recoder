@@ -50,7 +50,7 @@ def parse_args() -> argparse.Namespace:
         "-l",
         "--lang",
         help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language",
-        choices=["eng", "deu", "spa", "jpn", "ger", "rus", "fin"],
+        choices=["eng", "deu", "spa", "jpn", "ger", "rus", "fin", "kor"],
         default="eng",
         dest="lang",
         metavar="LANG",
