@@ -44,6 +44,30 @@ else:
     HWACC = None
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Recode media to common format", formatter_class=RichHelpFormatter)
+    parser.add_argument(
+        "-l",
+        "--lang",
+        help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language",
+        choices=["eng", "deu", "spa", "jpn", "ger", "rus", "fin"],
+        default="eng",
+        dest="lang",
+        metavar="LANG",
+    )
+    parser.add_argument("-i", "--input", help="File to recode", type=str, required=False, dest="inputfile", metavar="FILE")
+    parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIR")
+    parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename", "seriesdir"], required=True, dest="contentype", metavar="TYPE")
+    parser.add_argument("-a", "--no-api", help="Disable Metadata and Subtitle APIs", default=False, action="store_true", dest="apis")
+    parser.add_argument("-s", "--subtitle", help="Directory containing Subtitles", required=False, default="", dest="subdir", metavar="DIR")
+    parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265", "av1"], dest="codec", metavar="CODEC", default="av1")
+    parser.add_argument("-b", "--bit", help="Select bit depth", required=False, choices=["8", "10"], dest="bit", metavar="BIT", default="10")
+    parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
+    parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=["eng", "deu"], dest="infolang")
+    parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=["eng", "ger"], dest="sublang")
+    return parser.parse_args()
+
+
 def rename_keys_to_lower(iterable):
     if isinstance(iterable, dict):
         for key in list(iterable.keys()):
@@ -856,27 +880,7 @@ def main():
     if not os.path.exists:
         os.makedirs(configpath)
 
-    parser = argparse.ArgumentParser(description="Recode media to common format", formatter_class=RichHelpFormatter)
-    parser.add_argument(
-        "-l",
-        "--lang",
-        help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language",
-        choices=["eng", "deu", "spa", "jpn", "ger", "rus", "fin"],
-        default="eng",
-        dest="lang",
-        metavar="LANG",
-    )
-    parser.add_argument("-i", "--input", help="File to recode", type=str, required=False, dest="inputfile", metavar="FILE")
-    parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIR")
-    parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename", "seriesdir"], required=True, dest="contentype", metavar="TYPE")
-    parser.add_argument("-a", "--no-api", help="Disable Metadata and Subtitle APIs", default=False, action="store_true", dest="apis")
-    parser.add_argument("-s", "--subtitle", help="Directory containing Subtitles", required=False, default="", dest="subdir", metavar="DIR")
-    parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265", "av1"], dest="codec", metavar="CODEC", default="av1")
-    parser.add_argument("-b", "--bit", help="Select bit depth", required=False, choices=["8", "10"], dest="bit", metavar="BIT", default="10")
-    parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
-    parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=["eng", "deu"], dest="infolang")
-    parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=["eng", "ger"], dest="sublang")
-    args = parser.parse_args()
+    args = parse_args()
 
     if args.hwaccel is False:
         global HWACC
