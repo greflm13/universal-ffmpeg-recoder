@@ -893,6 +893,8 @@ def main():
 
     if not args.infolang:
         infolang = args.lang
+        if infolang == "ger":
+            infolang = "deu"
     else:
         infolang = args.infolang
 
