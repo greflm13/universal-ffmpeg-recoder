@@ -50,7 +50,7 @@ def parse_args() -> argparse.Namespace:
         "-l",
         "--lang",
         help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language",
-        choices=["eng", "deu", "spa", "jpn", "ger", "rus", "fin", "kor"],
+        choices=["eng", "deu", "spa", "jpn", "ger", "rus", "fin", "kor", "ara"],
         default="eng",
         dest="lang",
         metavar="LANG",
@@ -157,7 +157,15 @@ def get_series_from_tvdb(series: str, token: str, lang: str) -> tuple[list, str,
     if response.status_code != 200:
         response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers=headers)
     res = response.json()["data"]
+    if res == []:
+        response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&language={lang}", timeout=10, headers=headers)
+        if response.status_code != 200:
+            response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series", timeout=10, headers=headers)
+        res = response.json()["data"]
     choices = [f"{serie['slug'].ljust(30)[:30]} {serie.get('year')}: {serie.get('overviews', {}).get(lang, serie.get('overview', ''))[:180]}" for serie in res]
+    if choices == []:
+        print(f"{Color.RED}err: {Style.RESET_ALL}Series not found! {Color.BLUE}{series}{Style.RESET_ALL}")
+        return None, None, None
     choice = survey.routines.select("Select TV Show: ", options=choices)
     seriesid = response.json()["data"][choice]["id"].removeprefix("series-")
     # response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/dvd/{lang}?page=0", timeout=10, headers=headers)
@@ -233,6 +241,8 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str,
     series = os.path.basename(folder)
     parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
     seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=infolang)
+    if seriesobj is None:
+        return
     if year != "":
         series = f"{seriesname} ({year})"
     for dire in sorted(os.listdir(folder)):
@@ -443,8 +453,8 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
             dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["hearing_impaired"]}
 
 
-def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
-    if token is None:
+def get_subtitles_from_ost(token: dict[str, str], metadata: dict, lang: str, file: str):
+    if token.get("token", None) is None:
         return None
     headers = {"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.1", "Authorization": f"Bearer {token['token']}"}
     if metadata.get("show", False):
@@ -463,6 +473,8 @@ def get_subtitles_from_ost(token: str, metadata: dict, lang: str, file: str):
     try:
         subtitle = response.json()["data"][0]["attributes"]
     except IndexError:
+        return None
+    except requests.JSONDecodeError:
         return None
     response = requests.post("https://api.opensubtitles.com/api/v1/download", headers=headers, json={"file_id": subtitle["files"][0]["file_id"]})
     link = response.json()["link"]
@@ -850,13 +862,18 @@ def api_login(config: str) -> str:
     response = requests.post("https://api4.thetvdb.com/v4/login", json={"apikey": conf.get("thetvdb", "apikey")}, timeout=10, headers={"Content-Type": "application/json"})
     thetvdbtoken = response.json()["data"]["token"]
 
-    response = requests.post(
-        "https://api.opensubtitles.com/api/v1/login",
-        json={"username": conf.get("opensubtitles", "user"), "password": conf.get("opensubtitles", "password")},
-        timeout=10,
-        headers={"Content-Type": "application/json", "Api-Key": conf.get("opensubtitles", "apikey"), "User-Agent": "recoder v1.0.0"},
-    )
-    opensubtitlestoken = response.json()["token"]
+    try:
+        response = requests.post(
+            "https://api.opensubtitles.com/api/v1/login",
+            json={"username": conf.get("opensubtitles", "user"), "password": conf.get("opensubtitles", "password")},
+            timeout=10,
+            headers={"Content-Type": "application/json", "Api-Key": conf.get("opensubtitles", "apikey"), "User-Agent": "recoder v1.0.0"},
+        )
+        opensubtitlestoken = response.json()["token"]
+    except requests.Timeout:
+        opensubtitlestoken = None
+    except requests.JSONDecodeError:
+        opensubtitlestoken = None
 
     tokens = {"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": conf.get("opensubtitles", "apikey")}}
     return tokens
