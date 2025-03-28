@@ -34,7 +34,6 @@
         "compounds": []
     },
     "extensions": {"recommendations": [
-        "ms-python.black-formatter",
         "charliermarsh.ruff",
     ]}
 }

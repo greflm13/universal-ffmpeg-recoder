@@ -17,7 +17,7 @@ from colorama import init as colorama_init
 from colorama import Fore as Color
 from colorama import Style
 
-from ffprobe import Ffprobe, Stream, StreamTags
+from modules.ffprobe import Ffprobe, Stream, StreamTags
 
 colorama_init()
 

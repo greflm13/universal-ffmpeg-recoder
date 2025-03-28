@@ -8,34 +8,22 @@ import shutil
 import datetime
 import tempfile
 import argparse
-import configparser
-import urllib.parse
 
 from subprocess import Popen, PIPE, STDOUT
-
-import requests
-import survey
 
 from colorama import init as colorama_init
 from colorama import Fore as Color
 from colorama import Style
 from rich_argparse import RichHelpFormatter
 
-from ffprobe import Ffprobe, Stream, StreamTags
-from FileOperations import File
+from modules.ffprobe import Ffprobe, StreamTags
+from modules.api import api_login, get_episode_name, get_movie_name, get_series_from_tvdb, get_subtitles_from_ost, logout
+from modules.video import video
+from modules.audio import audio, recode_audio
+from modules.subs import subtitles
 
 colorama_init()
 
-# fmt: off
-VIDEO_CONTAINERS = [
-    ".3g2",".3gp",".amv",".asf",".avi",".drc",".f4a",".f4b",".f4p",".f4v",".flv",".gif",".gifv",".M2TS",
-    ".m2v",".m4p",".m4v",".mkv",".mng",".mov",".mp2",".mp4",".mpe",".mpeg",".mpg",".mpv",".MTS",".mxf",
-    ".nsv",".ogg",".ogv",".qt",".rm",".rmvb",".roq",".svi",".TS",".viv",".vob",".webm",".wmv",".yuv",
-]
-# fmt: on
-
-AUDIO_PRIORITY = {"dts": 6, "flac": 5, "opus": 4, "truehd": 3, "eac3": 2, "ac3": 1}
-SUBTITLE_PRIORITY = {"forced": 4, "full": 3, "none": 1}
 if os.path.exists("/usr/lib/libamfrt64.so"):
     HWACC = "AMF"
 elif os.path.exists("/usr/lib/libcuda.so"):
@@ -78,161 +66,6 @@ def rename_keys_to_lower(iterable):
         for item in iterable:
             item = rename_keys_to_lower(item)
     return iterable
-
-
-def get_movie_name(file: str, token: str, lang: str, stype: str = "single"):
-    for container in VIDEO_CONTAINERS:
-        if file.endswith(container):
-            match = re.search(pattern=r"(.*)(\d{4}(?!p))", string=file)
-            if match:
-                comment = None
-                date = None
-                year: str = match.groups()[1]
-                movie_name: str = match.groups()[0].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
-                output_file = f"{movie_name}({year}).mkv"
-                if token is None:
-                    return output_file, {"title": f"{movie_name}({year})"}
-                succ = False
-                while not succ:
-                    try:
-                        response = requests.get(
-                            f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}&language={lang}",
-                            timeout=10,
-                            headers={"Authorization": f"Bearer {token}"},
-                        )
-                        succ = True
-                    except requests.exceptions.ReadTimeout:
-                        succ = False
-                if response.status_code != 200:
-                    succ = False
-                    while not succ:
-                        try:
-                            response = requests.get(
-                                f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"}
-                            )
-                            succ = True
-                        except requests.exceptions.ReadTimeout:
-                            succ = False
-                try:
-                    ret = response.json()["data"]
-                    if len(ret) > 1 and stype == "single":
-                        choices = [f"{movie['slug'].ljust(30)[:30]} {movie.get('year')}: {movie.get('overviews', {}).get(lang, movie.get('overview', ''))[:180]}" for movie in ret]
-                        choice = survey.routines.select("Select Movie: ", options=choices)
-                    else:
-                        choice = 0
-                    ret = ret[choice]
-                    if "overviews" in ret and lang in ret["overviews"]:
-                        comment = ret["overviews"][lang]
-                    elif "overviews" in ret and "eng" in ret["overviews"]:
-                        comment = ret["overviews"]["eng"]
-                    if "first_air_time" in ret and ret["first_air_time"] != "":
-                        date = ret["first_air_time"]
-                    if "translations" in ret and lang in ret["translations"]:
-                        metadata = {"comment": comment, "title": f"{ret['translations'][lang]} ({ret['year']})", "date": date}
-                        output_file = f"{ret['translations'][lang].replace('/', '-')} ({ret['year']}).mkv"
-                    else:
-                        metadata = {"comment": comment, "title": ret["extended_title"].replace("/", "-"), "date": date}
-                        output_file = f"{ret['extended_title']}.mkv"
-                except IndexError:
-                    metadata = {"title": f"{movie_name}({year})"}
-            else:
-                output_file: str = os.path.splitext(file)[0] + ".mkv"
-                metadata = {"title": os.path.splitext(file)[0]}
-            return output_file, metadata
-    return None, None
-
-
-def get_series_from_tvdb(series: str, token: str, lang: str) -> tuple[list, str, str]:
-    headers = {"Authorization": f"Bearer {token}"}
-    match = re.search(r"\((\d{4})\)", series)
-    try:
-        seriesyear = match.groups()[0]
-        queryseries = urllib.parse.quote(series.removesuffix(f"({seriesyear})").strip())
-    except AttributeError:
-        seriesyear = ""
-        queryseries = urllib.parse.quote(re.search(r"[A-Za-z._-]+", series)[0].replace(".", " ").replace("-", " ").replace("_", " ").upper().removesuffix("S").strip())
-    if token is None:
-        return [], "", seriesyear
-    response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}&language={lang}", timeout=10, headers=headers)
-    if response.status_code != 200:
-        response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers=headers)
-    res = response.json()["data"]
-    if res == []:
-        response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&language={lang}", timeout=10, headers=headers)
-        if response.status_code != 200:
-            response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series", timeout=10, headers=headers)
-        res = response.json()["data"]
-    choices = [f"{serie['slug'].ljust(30)[:30]} {serie.get('year')}: {serie.get('overviews', {}).get(lang, serie.get('overview', ''))[:180]}" for serie in res]
-    if choices == []:
-        print(f"{Color.RED}err: {Style.RESET_ALL}Series not found! {Color.BLUE}{series}{Style.RESET_ALL}")
-        return None, None, None
-    choice = survey.routines.select("Select TV Show: ", options=choices)
-    seriesid = response.json()["data"][choice]["id"].removeprefix("series-")
-    # response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/dvd/{lang}?page=0", timeout=10, headers=headers)
-    response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/default/{lang}?page=0", timeout=10, headers=headers)
-    data = response.json()["data"]
-    returnlst: list = data["episodes"]
-    if lang in data["nameTranslations"]:
-        translationres = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/translations/{lang}", timeout=10, headers=headers)
-        translation = translationres.json()["data"]
-        name = translation["name"]
-    else:
-        name = data["name"]
-    year = data["year"]
-
-    while response.json()["links"]["next"] is not None:
-        response = requests.get(response.json()["links"]["next"], timeout=10, headers={"Authorization": f"Bearer {token}"})
-        returnlst.extend(response.json()["data"]["episodes"])
-    return returnlst, name, year
-
-
-def get_episode_name(series: str, file: str, seriesobj: list) -> tuple[str | None, str | None, dict[str, str] | None]:
-    for container in VIDEO_CONTAINERS:
-        if file.endswith(container):
-            match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})*)", file)
-            if match:
-                seasonnum = match.groups()[0]
-                episodes = match.groups()[1].replace("e", "E").split("E")
-                episodes.remove("")
-                ep = ""
-                titles: list[str] = []
-                comments: list[str] = []
-                date = None
-                for episode in episodes:
-                    ep = ep + "E" + episode.rjust(2, "0")
-                    for epi in seriesobj:
-                        if epi["seasonNumber"] == int(match.groups()[0]) and epi["number"] == int(episode):
-                            if isinstance(epi["name"], str):
-                                titles.append(epi["name"])
-                            else:
-                                titles.append("")
-                            if isinstance(epi["overview"], str):
-                                comments.append(epi["overview"].replace("\n", "").strip())
-                            date = epi["aired"]
-                            break
-                if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
-                    title = re.sub(r"\(\d+\)", "", titles[0]).strip()
-                else:
-                    title = " + ".join(titles)
-                if title != "":
-                    name = f"{series} - S{seasonnum.rjust(2, '0')}{ep} - {title.replace('/', '-')}.mkv"
-                else:
-                    name = f"{series} - S{seasonnum.rjust(2, '0')}{ep}.mkv"
-                season = f"Season {seasonnum.rjust(2, '0')}"
-                try:
-                    comment = " ".join(comments)
-                except TypeError:
-                    comment = None
-                metadata: dict[str, str] = {
-                    "episode_id": ", ".join(epi.removeprefix("0") for epi in episodes),
-                    "season_number": seasonnum.removeprefix("0"),
-                    "show": series,
-                    "comment": comment,
-                    "title": title,
-                    "date": date,
-                }
-                return season, name, metadata
-    return None, None, None
 
 
 def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str, sublang: str, subdir: str = "", codec: str = "h265", bit: int = 10):
@@ -281,212 +114,6 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str,
                     codec=codec,
                     bit=bit,
                 )
-
-
-def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list, codec="h265", bit=10):
-    if codec == "av1":
-        codec = {"name": "av1", "swenc": "libsvtav1", "amdenc": "av1_amf", "nvdenc": "av1_nvenc"}
-    elif codec == "h265":
-        codec = {"name": "hevc", "swenc": "libx265", "amdenc": "hevc_amf", "nvdenc": "hevc_nvenc"}
-    elif codec == "h264":
-        codec = {"name": "h264", "swenc": "libx264", "amdenc": "h264_amf", "nvdenc": "h264_nvenc"}
-    if stream.tags is None:
-        stream.tags = StreamTags(title=None)
-    if (stream.codec_name != codec["name"] or (bit == 8 and stream.pix_fmt != "yuv420p")) and not stream.disposition.attached_pic:
-        ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-        if HWACC == "AMF":
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", codec["amdenc"]])
-        elif HWACC == "CUDA":
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", codec["nvdenc"]])
-        else:
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", codec["swenc"]])
-        vrecoding = True
-        printlines.append(
-            f"Converting {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}{codec['name']} {Color.YELLOW}{stream.pix_fmt}{Style.RESET_ALL} with index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
-        )
-    elif not stream.disposition.attached_pic:
-        ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-        ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
-        printlines.append(
-            f"Copying {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name} {Color.YELLOW}{stream.pix_fmt}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
-        )
-    vindex += 1
-    return vrecoding, vindex, stream.pix_fmt
-
-
-def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list, lang: str = "eng"):
-    if stream.codec_name in AUDIO_PRIORITY.keys():
-        ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-        ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
-        printlines.append(
-            f"Copying {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
-        )
-    else:
-        ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-        ffmpeg_recoding.extend([f"-c:a:{aindex}", "libopus"])
-        arecoding = True
-        stream.codec_name = "opus"
-        printlines.append(
-            f"Converting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}opus{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
-        )
-    obj = stream.to_dict()
-    obj["newindex"] = aindex
-    astreams.append(obj)
-
-    if stream.tags.language in ["eng", "und", "jpn", None, lang]:
-        update_audio_default(adefault, stream, aindex, lang)
-
-    return arecoding
-
-
-def update_audio_default(adefault: dict, stream: Stream, aindex: int, lang: str = "eng"):
-    if (
-        (stream.channels > adefault["channels"] and stream.tags.language == lang)
-        or (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels == adefault["channels"] and stream.tags.language == lang)
-        or (adefault["lang"] != lang and stream.tags.language == lang)
-    ):
-        adefault.update(
-            {
-                "aindex": aindex,
-                "codec": stream.codec_name,
-                "lang": stream.tags.language,
-                "oindex": stream.index,
-                "channels": stream.channels,
-                "title": stream.tags.title,
-            }
-        )
-
-
-def audio(
-    stream: Stream,
-    ffmpeg_mapping: list,
-    ffmpeg_recoding: list,
-    arecoding: bool,
-    aindex: int,
-    adefault: dict,
-    astreams: list,
-    printlines: list,
-    changealang: list,
-    lang: str = "eng",
-):
-    if stream.tags is None:
-        stream.tags = StreamTags.from_dict({"title": None})
-    if stream.tags.language in ["und", None]:
-        changealang.append({"index": aindex, "lang": lang})
-        stream.tags.language = lang
-    if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None, lang]:
-        arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang)
-        aindex += 1
-    return arecoding, aindex, changealang
-
-
-def subtitles(
-    stream: Stream,
-    ffmpeg_mapping: list,
-    ffmpeg_recoding: list,
-    sindex: int,
-    sdefault: dict,
-    sstreams: list,
-    printlines: list,
-    dispositions: dict[dict[str, str | list[str]]],
-    lang: str,
-    file=0,
-):
-    if stream.tags is None:
-        stream.tags = StreamTags.from_dict({"title": None})
-    if stream.tags.language in ["eng", "ger", "deu", "und", None]:
-        stream.tags.language = "ger" if stream.tags.language == "deu" else stream.tags.language
-        if stream.codec_name in ["subrip", "hdmv_pgs_subtitle", "ass", "dvd_subtitle"]:
-            ffmpeg_mapping.extend(["-map", f"{file}:{stream.index}"])
-            ffmpeg_recoding.extend([f"-c:s:{sindex}", "copy"])
-            printlines.append(
-                f"Copying {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}{file}:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file"
-            )
-        else:
-            ffmpeg_mapping.extend(["-map", f"{file}:{stream.index}"])
-            ffmpeg_recoding.extend([f"-c:s:{sindex}", "srt"])
-            printlines.append(
-                f"Converting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}{file}:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}srt{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file"
-            )
-            stream.codec_name = "srt"
-        obj = stream.to_dict()
-        obj["newindex"] = sindex
-        sstreams.append(obj)
-        update_subtitle_default(sdefault, stream, sindex, dispositions, lang)
-        sindex += 1
-    return sindex
-
-
-def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[dict[str, str | list[str]]], lang: str):
-    subtitle_type = "none"
-    if stream.tags.title:
-        title_lower = stream.tags.title.lower()
-        if "full" in title_lower:
-            subtitle_type = "full"
-        elif "sdh" in title_lower:
-            subtitle_type = "sdh"
-        elif "forced" in title_lower:
-            subtitle_type = "forced"
-    if (stream.tags.language == lang or stream.tags.language is None) and (SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0)):
-        sdefault.update(
-            {
-                "lang": stream.tags.language,
-                "oindex": stream.index,
-                "sindex": sindex,
-                "type": subtitle_type if not stream.disposition.forced else "forced",
-                "title": stream.tags.title,
-            }
-        )
-
-    if subtitle_type == "forced" or stream.disposition.forced:
-        stype = "s"
-        if dispositions.get(stype + str(sindex), False):
-            dispositions.get(stype + str(sindex))["types"].append("forced")
-        else:
-            dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["forced"]}
-        stream.disposition.forced = True
-    if subtitle_type == "sdh" or stream.disposition.hearing_impaired:
-        stype = "s"
-        if dispositions.get(stype + str(sindex), False):
-            dispositions.get(stype + str(sindex))["types"].append("hearing_impaired")
-        else:
-            dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["hearing_impaired"]}
-
-
-def get_subtitles_from_ost(token: dict[str, str], metadata: dict, lang: str, file: str):
-    if token.get("token", None) is None:
-        return None
-    headers = {"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.1", "Authorization": f"Bearer {token['token']}"}
-    if metadata.get("show", False):
-        match = re.findall(r"([\w\s]+)\s\((\d{4})\)", metadata["show"])[0]
-        name = f"{match[0]} ({match[1]}) - {metadata['title']}"
-    else:
-        name = metadata["title"]
-    response = requests.get(f"https://api.opensubtitles.com/api/v1/utilities/guessit?filename={name}", headers=headers)
-    params = response.json()
-    params["language"] = lang[:2]
-    params["page"] = 0
-    params["moviehash"] = File(file).get_hash()
-    params["order_by"] = "ratings"
-
-    response = requests.get("https://api.opensubtitles.com/api/v1/subtitles", params=urllib.parse.urlencode(params), headers=headers)
-    try:
-        subtitle = response.json()["data"][0]["attributes"]
-    except IndexError:
-        return None
-    except requests.JSONDecodeError:
-        return None
-    response = requests.post("https://api.opensubtitles.com/api/v1/download", headers=headers, json={"file_id": subtitle["files"][0]["file_id"]})
-    link = response.json()["link"]
-    filename = response.json()["file_name"]
-    response = requests.get(link, headers=headers)
-    content = response.text
-    if content == "":
-        return None
-    _, tmpfile = tempfile.mkstemp(suffix=os.path.splitext(filename)[1])
-    with open(tmpfile, "w") as f:
-        f.write(content)
-    return tmpfile
 
 
 def recode(
@@ -605,7 +232,7 @@ def recode(
     printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------")
 
     for stream in videostreams:
-        vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, codec, bit)
+        vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, HWACC, codec, bit)
 
     for stream in audiostreams:
         arecoding, aindex, changealang = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, changealang, lang)
@@ -766,7 +393,7 @@ def recode(
     if changemetadata:
         printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------")
 
-    fd, tmpfile = tempfile.mkstemp(suffix=".mkv")
+    _, tmpfile = tempfile.mkstemp(suffix=".mkv")
 
     ffmpeg_command.extend(ffmpeg_mapping)
     ffmpeg_command.extend(ffmpeg_recoding)
@@ -838,52 +465,6 @@ def recode(
             if os.path.exists(subfile):
                 os.remove(subfile)
     print(f"{Color.GREEN}Done!{Style.RESET_ALL}")
-
-
-def api_login(config: str) -> str:
-    if not os.path.exists(config):
-        os.mknod(config)
-
-    conf = configparser.ConfigParser()
-    conf.read(config)
-
-    if "thetvdb" not in conf:
-        conf["thetvdb"] = {}
-        conf["thetvdb"]["apikey"] = input('theTVDB api not configured. Please open "https://thetvdb.com/api-information/signup" and paste the api key here: ')
-    if "opensubtitles" not in conf:
-        conf["opensubtitles"] = {}
-        conf["opensubtitles"]["apikey"] = input('OpenSubtitles api not configured. Please open "https://www.opensubtitles.com/consumers" and paste the api key here: ')
-        conf["opensubtitles"]["user"] = input("username: ")
-        conf["opensubtitles"]["password"] = input("password: ")
-
-    with open(config, "w") as configfile:
-        conf.write(configfile)
-
-    response = requests.post("https://api4.thetvdb.com/v4/login", json={"apikey": conf.get("thetvdb", "apikey")}, timeout=10, headers={"Content-Type": "application/json"})
-    thetvdbtoken = response.json()["data"]["token"]
-
-    try:
-        response = requests.post(
-            "https://api.opensubtitles.com/api/v1/login",
-            json={"username": conf.get("opensubtitles", "user"), "password": conf.get("opensubtitles", "password")},
-            timeout=10,
-            headers={"Content-Type": "application/json", "Api-Key": conf.get("opensubtitles", "apikey"), "User-Agent": "recoder v1.0.0"},
-        )
-        opensubtitlestoken = response.json()["token"]
-    except requests.Timeout:
-        opensubtitlestoken = None
-    except requests.JSONDecodeError:
-        opensubtitlestoken = None
-
-    tokens = {"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": conf.get("opensubtitles", "apikey")}}
-    return tokens
-
-
-def logout(token):
-    requests.delete(
-        "https://api.opensubtitles.com/api/v1/logout",
-        headers={"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token['token']}"},
-    )
 
 
 def main():
@@ -988,7 +569,7 @@ def main():
         for dire in sorted(os.listdir(folder)):
             if os.path.isdir(dire):
                 for subdir in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
-                    season, name, metadata = get_episode_name(series, subdir, seriesobj)
+                    season, name, _ = get_episode_name(series, subdir, seriesobj)
                     if name is not None:
                         if not os.path.exists(os.path.join(parentfolder, series, season)):
                             os.makedirs(os.path.join(parentfolder, series, season))
@@ -998,7 +579,7 @@ def main():
                             print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                             shutil.move(old, new)
             else:
-                season, name, metadata = get_episode_name(series, dire, seriesobj)
+                season, name, _ = get_episode_name(series, dire, seriesobj)
                 if name is not None:
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
                         os.makedirs(os.path.join(parentfolder, series, season))
