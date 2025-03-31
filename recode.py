@@ -17,7 +17,7 @@ from colorama import Style
 from rich_argparse import RichHelpFormatter
 
 from modules.ffprobe import Ffprobe, StreamTags
-from modules.api import api_login, get_episode_name, get_movie_name, get_series_from_tvdb, get_subtitles_from_ost, logout
+from modules.api import api_login, change_episode_number, change_season_type, get_episode, get_movie_name, get_series_from_tvdb, get_subtitles_from_ost, logout
 from modules.video import video
 from modules.audio import audio, recode_audio
 from modules.subs import subtitles
@@ -45,7 +45,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("-i", "--input", help="File to recode", type=str, required=False, dest="inputfile", metavar="FILE")
     parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIR")
-    parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename", "seriesdir"], required=True, dest="contentype", metavar="TYPE")
+    parser.add_argument(
+        "-t", "--type", help="Type of content", choices=["film", "series", "rename", "seriesdir", "changeSeasonType"], required=True, dest="contentype", metavar="TYPE"
+    )
     parser.add_argument("-a", "--no-api", help="Disable Metadata and Subtitle APIs", default=False, action="store_true", dest="apis")
     parser.add_argument("-s", "--subtitle", help="Directory containing Subtitles", required=False, default="", dest="subdir", metavar="DIR")
     parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265", "av1"], dest="codec", metavar="CODEC", default="av1")
@@ -81,7 +83,7 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str,
     for dire in sorted(os.listdir(folder)):
         if os.path.isdir(os.path.join(folder, dire)):
             for file in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
-                season, name, metadata = get_episode_name(series, file, seriesobj)
+                season, name, metadata = get_episode(series, file, seriesobj)
                 if name is not None:
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
                         os.makedirs(os.path.join(parentfolder, series, season))
@@ -98,7 +100,7 @@ def recode_series(folder: str, apitokens: dict | None, lang: str, infolang: str,
                         bit=bit,
                     )
         else:
-            season, name, metadata = get_episode_name(series, dire, seriesobj)
+            season, name, metadata = get_episode(series, dire, seriesobj)
             if name is not None:
                 if not os.path.exists(os.path.join(parentfolder, series, season)):
                     os.makedirs(os.path.join(parentfolder, series, season))
@@ -569,7 +571,7 @@ def main():
         for dire in sorted(os.listdir(folder)):
             if os.path.isdir(dire):
                 for subdir in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
-                    season, name, _ = get_episode_name(series, subdir, seriesobj)
+                    season, name, _ = get_episode(series, subdir, seriesobj)
                     if name is not None:
                         if not os.path.exists(os.path.join(parentfolder, series, season)):
                             os.makedirs(os.path.join(parentfolder, series, season))
@@ -579,7 +581,7 @@ def main():
                             print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                             shutil.move(old, new)
             else:
-                season, name, _ = get_episode_name(series, dire, seriesobj)
+                season, name, _ = get_episode(series, dire, seriesobj)
                 if name is not None:
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
                         os.makedirs(os.path.join(parentfolder, series, season))
@@ -588,6 +590,36 @@ def main():
                     if old != new:
                         print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                         shutil.move(old, new)
+    elif args.contentype == "changeSeasonType":
+        folder = os.getcwd()
+        series = os.path.basename(folder)
+        parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
+        currseriesobj, destseriesobj, seriesname, year = change_season_type(series, apitokens["thetvdb"], lang=infolang)
+        if year != "":
+            series = f"{seriesname} ({year})"
+        for dire in sorted(os.listdir(folder)):
+            if os.path.isdir(dire):
+                for subdir in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
+                    season, name = change_episode_number(series, subdir, currseriesobj, destseriesobj)
+                    if name is not None:
+                        if not os.path.exists(os.path.join(parentfolder, series, season)):
+                            os.makedirs(os.path.join(parentfolder, series, season))
+                        old = os.path.join(folder, dire, subdir)
+                        new = os.path.splitext(os.path.join(parentfolder, series, season, name))[0] + os.path.splitext(subdir)[1]
+                        if old != new:
+                            print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
+                            shutil.move(old, new)
+            else:
+                season, name = change_episode_number(series, subdir, currseriesobj, destseriesobj)
+                if name is not None:
+                    if not os.path.exists(os.path.join(parentfolder, series, season)):
+                        os.makedirs(os.path.join(parentfolder, series, season))
+                    old = os.path.join(folder, dire)
+                    new = os.path.splitext(os.path.join(parentfolder, series, season, name))[0] + os.path.splitext(dire)[1]
+                    if old != new:
+                        print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
+                        shutil.move(old, new)
+
     if not args.apis:
         logout(apitokens["opensub"])
 
