@@ -13,13 +13,13 @@
         "version": "0.2.0",
         "configurations": [
             {
-                "name": "Python Debugger: Current File",
+                "name": "Debug recode.py",
                 "type": "debugpy",
                 "request": "launch",
                 "program": "${workspaceFolder}/recode.py",
                 "console": "integratedTerminal",
                 "args": ["-t", "series", "-l", "eng"],
-                "cwd": "/mnt/nfs/series/South Park (1997)"
+                "cwd": "/home/user/Videos/Doctor Who (2005) (2005)"
             },
             {
                 "name": "Generate Schema",

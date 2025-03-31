@@ -55,6 +55,8 @@ def api_login(config: str) -> str:
         opensubtitlestoken = None
     except requests.JSONDecodeError:
         opensubtitlestoken = None
+    except KeyError:
+        opensubtitlestoken = None
 
     tokens = {"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": conf.get("opensubtitles", "apikey")}}
     return tokens
@@ -155,8 +157,15 @@ def get_series_from_tvdb(series: str, token: str, lang: str) -> tuple[list, str,
         return None, None, None
     choice = survey.routines.select("Select TV Show: ", options=choices)
     seriesid = response.json()["data"][choice]["id"].removeprefix("series-")
-    # response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/dvd/{lang}?page=0", timeout=10, headers=headers)
-    response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/default/{lang}?page=0", timeout=10, headers=headers)
+    response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/extended", timeout=10, headers=headers)
+    data = response.json()["data"]["seasonTypes"]
+    if len(data) > 1:
+        types = [typ["alternateName"] if typ["alternateName"] is not None else typ["name"] for typ in data]
+        choice = survey.routines.select("Select Season Type: ", options=types)
+        seasonType = data[choice]["type"]
+    else:
+        seasonType = "default"
+    response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/{seasonType}/{lang}?page=0", timeout=10, headers=headers)
     data = response.json()["data"]
     returnlst: list = data["episodes"]
     if lang in data["nameTranslations"]:
@@ -174,51 +183,51 @@ def get_series_from_tvdb(series: str, token: str, lang: str) -> tuple[list, str,
 
 
 def get_episode_name(series: str, file: str, seriesobj: list) -> tuple[str | None, str | None, dict[str, str] | None]:
-    for container in VIDEO_CONTAINERS:
-        if file.endswith(container):
-            match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})*)", file)
-            if match:
-                seasonnum = match.groups()[0]
-                episodes = match.groups()[1].replace("e", "E").split("E")
-                episodes.remove("")
-                ep = ""
-                titles: list[str] = []
-                comments: list[str] = []
-                date = None
-                for episode in episodes:
-                    ep = ep + "E" + episode.rjust(2, "0")
-                    for epi in seriesobj:
-                        if epi["seasonNumber"] == int(match.groups()[0]) and epi["number"] == int(episode):
-                            if isinstance(epi["name"], str):
-                                titles.append(epi["name"])
-                            else:
-                                titles.append("")
-                            if isinstance(epi["overview"], str):
-                                comments.append(epi["overview"].replace("\n", "").strip())
-                            date = epi["aired"]
-                            break
-                if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
-                    title = re.sub(r"\(\d+\)", "", titles[0]).strip()
-                else:
-                    title = " + ".join(titles)
-                if title != "":
-                    name = f"{series} - S{seasonnum.rjust(2, '0')}{ep} - {title.replace('/', '-')}.mkv"
-                else:
-                    name = f"{series} - S{seasonnum.rjust(2, '0')}{ep}.mkv"
-                season = f"Season {seasonnum.rjust(2, '0')}"
-                try:
-                    comment = " ".join(comments)
-                except TypeError:
-                    comment = None
-                metadata: dict[str, str] = {
-                    "episode_id": ", ".join(epi.removeprefix("0") for epi in episodes),
-                    "season_number": seasonnum.removeprefix("0"),
-                    "show": series,
-                    "comment": comment,
-                    "title": title,
-                    "date": date,
-                }
-                return season, name, metadata
+    # for container in VIDEO_CONTAINERS:
+    if os.path.splitext(file)[1] in VIDEO_CONTAINERS:
+        match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})*)", file)
+        if match:
+            seasonnum = match.groups()[0]
+            episodes = match.groups()[1].replace("e", "E").split("E")
+            episodes.remove("")
+            ep = ""
+            titles: list[str] = []
+            comments: list[str] = []
+            date = None
+            for episode in episodes:
+                ep = ep + "E" + episode.rjust(2, "0")
+                for epi in seriesobj:
+                    if epi["seasonNumber"] == int(match.groups()[0]) and epi["number"] == int(episode):
+                        if isinstance(epi["name"], str):
+                            titles.append(epi["name"])
+                        else:
+                            titles.append("")
+                        if isinstance(epi["overview"], str):
+                            comments.append(epi["overview"].replace("\n", "").strip())
+                        date = epi["aired"]
+                        break
+            if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
+                title = re.sub(r"\(\d+\)", "", titles[0]).strip()
+            else:
+                title = " + ".join(titles)
+            if title != "":
+                name = f"{series} - S{seasonnum.rjust(2, '0')}{ep} - {title.replace('/', '-')}.mkv"
+            else:
+                name = f"{series} - S{seasonnum.rjust(2, '0')}{ep}.mkv"
+            season = f"Season {seasonnum.rjust(2, '0')}"
+            try:
+                comment = " ".join(comments)
+            except TypeError:
+                comment = None
+            metadata: dict[str, str] = {
+                "episode_id": ", ".join(epi.removeprefix("0") for epi in episodes),
+                "season_number": seasonnum.removeprefix("0"),
+                "show": series,
+                "comment": comment,
+                "title": title,
+                "date": date,
+            }
+            return season, name, metadata
     return None, None, None
 
 
