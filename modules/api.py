@@ -309,7 +309,7 @@ def get_episode(series: str, file: str, seriesobj: list) -> tuple[str | None, st
                 "date": date,
             }
             return season, name, metadata
-    return None, None, None, None
+    return None, None, None
 
 
 def get_subtitles_from_ost(token: dict[str, str], metadata: dict, lang: str, file: str):
