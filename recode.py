@@ -231,7 +231,7 @@ def recode(
             )
             attachmentstreams.append(stream)
 
-    printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------")
+    printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------{Style.RESET_ALL}")
 
     for stream in videostreams:
         vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, HWACC, codec, bit)
@@ -308,7 +308,7 @@ def recode(
             )
             vindex += 1
 
-    printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------")
+    printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------{Style.RESET_ALL}")
 
     if aindex > 0 and adefault["aindex"] is not None:
         for stream in astreams:
@@ -369,7 +369,7 @@ def recode(
         format_tags = {}
 
     if changedefault:
-        printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------")
+        printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------{Style.RESET_ALL}")
 
     for tag in metadata.keys():
         if metadata[tag] != "" and metadata[tag] is not None:
@@ -393,7 +393,7 @@ def recode(
         return
 
     if changemetadata:
-        printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------")
+        printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------{Style.RESET_ALL}")
 
     _, tmpfile = tempfile.mkstemp(suffix=".mkv")
 
