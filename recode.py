@@ -260,7 +260,7 @@ def recode(
                 else:
                     subfile = [subfile]
         else:
-            subfile = [get_subtitles_from_ost(token=apitokens.get("opensub", None), metadata=metadata, lang=lang, file=file)]
+            subfile = [get_subtitles_from_ost(token=apitokens.get("opensub", None), metadata=metadata, lang=sublang, file=file)]
         try:
             for fil in subfile:
                 p = Popen(
@@ -279,11 +279,11 @@ def recode(
                 ffmpeg_command.extend(["-i", fil])
                 for stream in sub.streams:
                     if stream.tags is None:
-                        stream.tags = StreamTags.from_dict({"title": None, "language": lang})
+                        stream.tags = StreamTags.from_dict({"title": None, "language": sublang})
                     midlines.append(
                         f"{Color.BLUE}1:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
                     )
-                    sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, file=1)
+                    sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions, sublang, file=1)
         except Exception:
             ...
 
