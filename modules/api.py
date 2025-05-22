@@ -163,7 +163,7 @@ def build_choice_list(series_list: list[dict[str, str]], lang: str) -> list[str]
         else:
             name = series["name"]
         filtered_list.append(
-            {"slug": series["slug"], "name": name, "year": series["year"], "overview": series["overviews"].get(lang, series["overviews"].get(series["primary_language"]))}
+            {"slug": series["slug"], "name": name, "year": series.get("year", "    "), "overview": series["overviews"].get(lang, series["overviews"].get(series["primary_language"]))}
         )
 
     slug_max_len = max([len(series["slug"]) for series in filtered_list])
