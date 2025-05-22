@@ -133,6 +133,61 @@ def get_movie_name(file: str, token: str, lang: str, stype: str = "single"):
     return None, None
 
 
+def split_string_at_whitespace(text: str, n: int) -> list[str]:
+    words = text.split()
+    lines = []
+    current_line = ""
+
+    for word in words:
+        if len(current_line) + len(word) + (1 if current_line else 0) <= n - 4:
+            current_line += (" " if current_line else "") + word
+        else:
+            if current_line:
+                lines.append(current_line)
+            current_line = word
+
+    if current_line:
+        lines.append(current_line)
+
+    return lines
+
+
+def build_choice_list(series_list: list[dict[str, str]], lang: str) -> list[str]:
+    filtered_list = []
+    choice_list = []
+    termwidth = os.get_terminal_size().columns
+
+    for series in series_list:
+        if series.get("translations", False):
+            name = series["translations"].get("eng", series["name"])
+        else:
+            name = series["name"]
+        filtered_list.append(
+            {"slug": series["slug"], "name": name, "year": series["year"], "overview": series["overviews"].get(lang, series["overviews"].get(series["primary_language"]))}
+        )
+
+    slug_max_len = max([len(series["slug"]) for series in filtered_list])
+    name_max_len = max([len(series["name"]) for series in filtered_list])
+
+    constants = slug_max_len + name_max_len + 13
+    free_space = termwidth - constants
+    spacer = " " * slug_max_len + " | " + " " * name_max_len + " |      | "
+
+    for series in filtered_list:
+        if constants + len(series["overview"]) > termwidth:
+            lines = split_string_at_whitespace(series["overview"], free_space)
+            for i, line in enumerate(lines):
+                if i == 0:
+                    overview = line
+                else:
+                    overview += "\n" + spacer + line
+        else:
+            overview = series["overview"]
+        choice_list.append(f"{series['slug'].ljust(slug_max_len)} | {series['name'].ljust(name_max_len)} | {series['year']} | {overview}")
+
+    return choice_list
+
+
 @cache
 def find_series_id(series: str, token: str, lang: str) -> str:
     headers = {"Authorization": f"Bearer {token}"}
@@ -152,7 +207,8 @@ def find_series_id(series: str, token: str, lang: str) -> str:
         if response.status_code != 200:
             response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series", timeout=10, headers=headers)
         res = response.json()["data"]
-    choices = [f"{serie['slug'].ljust(30)[:30]} {serie.get('year')}: {serie.get('overviews', {}).get(lang, serie.get('overview', ''))[:180]}" for serie in res]
+    # choices = [f"{serie['slug'].ljust(30)[:30]} {serie.get('year')}: {serie.get('overviews', {}).get(lang, serie.get('overview', ''))[:180]}" for serie in res]
+    choices = build_choice_list(res, lang)
     if choices == []:
         print(f"{Color.RED}err: {Style.RESET_ALL}Series not found! {Color.BLUE}{series}{Style.RESET_ALL}")
         return None, None, None

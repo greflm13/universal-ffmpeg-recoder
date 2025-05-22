@@ -183,6 +183,8 @@ def recode(
         metadata = {}
         metadata["title"] = os.path.basename(os.path.splitext(output_file)[0])
 
+    output_file = output_file.replace("?", "")
+
     prelines.append(
         f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}"
     )
