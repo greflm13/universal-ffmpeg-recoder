@@ -14,7 +14,7 @@ def subtitles(
     sdefault: dict,
     sstreams: list,
     printlines: list,
-    dispositions: dict[dict[str, str | list[str]]],
+    dispositions: dict[str, dict[str, str | list[str]]],
     lang: str,
     file=0,
 ):
@@ -43,7 +43,7 @@ def subtitles(
     return sindex
 
 
-def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[dict[str, str | list[str]]], lang: str):
+def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[str, dict[str, str | list[str]]], lang: str):
     subtitle_type = "none"
     if stream.tags.title:
         title_lower = stream.tags.title.lower()

@@ -23,7 +23,7 @@ VIDEO_CONTAINERS = [
 # fmt: on
 
 
-def api_login(config: str) -> str:
+def api_login(config: str) -> dict[str, str | dict[str, str]]:
     if not os.path.exists(config):
         os.mknod(config)
 
@@ -94,7 +94,7 @@ def get_movie_name(file: str, token: str, lang: str, stype: str = "single"):
                         succ = True
                     except requests.exceptions.ReadTimeout:
                         succ = False
-                if response.status_code != 200:
+                if response.status_code != 200:  # type: ignore
                     succ = False
                     while not succ:
                         try:
@@ -105,7 +105,7 @@ def get_movie_name(file: str, token: str, lang: str, stype: str = "single"):
                         except requests.exceptions.ReadTimeout:
                             succ = False
                 try:
-                    ret = response.json()["data"]
+                    ret = response.json()["data"]  # type: ignore
                     if len(ret) > 1 and stype == "single":
                         choices = [f"{movie['slug'].ljust(30)[:30]} {movie.get('year')}: {movie.get('overviews', {}).get(lang, movie.get('overview', ''))[:180]}" for movie in ret]
                         choice = survey.routines.select("Select Movie: ", options=choices)
@@ -152,18 +152,29 @@ def split_string_at_whitespace(text: str, n: int) -> list[str]:
     return lines
 
 
-def build_choice_list(series_list: list[dict[str, str]], lang: str) -> list[str]:
+def build_choice_list(series_list: list[dict[str, str | dict[str, str]]], lang: str) -> list[str]:
     filtered_list = []
     choice_list = []
     termwidth = os.get_terminal_size().columns
 
     for series in series_list:
         if series.get("translations", False):
-            name = series["translations"].get("eng", series["name"])
+            name = series["translations"].get("eng", series["name"])  # type: ignore
         else:
             name = series["name"]
+        if series.get("overviews", False):
+            overview = series["overviews"].get(lang, series["overviews"].get(series["primary_language"])) # type: ignore
+        else:
+            overview = ""
+        if overview is None:
+            overview = ""
         filtered_list.append(
-            {"slug": series["slug"], "name": name, "year": series.get("year", "    "), "overview": series["overviews"].get(lang, series["overviews"].get(series["primary_language"]))}
+            {
+                "slug": series["slug"],
+                "name": name,
+                "year": series.get("year", "    "),
+                "overview": overview,
+            }
         )
 
     slug_max_len = max([len(series["slug"]) for series in filtered_list])
@@ -172,6 +183,7 @@ def build_choice_list(series_list: list[dict[str, str]], lang: str) -> list[str]
     constants = slug_max_len + name_max_len + 13
     free_space = termwidth - constants
     spacer = " " * slug_max_len + " | " + " " * name_max_len + " |      | "
+    overview = ""
 
     for series in filtered_list:
         if constants + len(series["overview"]) > termwidth:
@@ -189,15 +201,15 @@ def build_choice_list(series_list: list[dict[str, str]], lang: str) -> list[str]
 
 
 @cache
-def find_series_id(series: str, token: str, lang: str) -> str:
+def find_series_id(series: str, token: str, lang: str) -> str | None:
     headers = {"Authorization": f"Bearer {token}"}
     match = re.search(r"\((\d{4})\)", series)
     try:
-        seriesyear = match.groups()[0]
+        seriesyear = match.groups()[0]  # type: ignore
         queryseries = urllib.parse.quote(series.removesuffix(f"({seriesyear})").strip())
     except AttributeError:
         seriesyear = ""
-        queryseries = urllib.parse.quote(re.search(r"[A-Za-z._-]+", series)[0].replace(".", " ").replace("-", " ").replace("_", " ").upper().removesuffix("S").strip())
+        queryseries = urllib.parse.quote(re.search(r"[A-Za-z._-]+", series)[0].replace(".", " ").replace("-", " ").replace("_", " ").upper().removesuffix("S").strip())  # type: ignore
     response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}&language={lang}", timeout=10, headers=headers)
     if response.status_code != 200:
         response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers=headers)
@@ -211,7 +223,7 @@ def find_series_id(series: str, token: str, lang: str) -> str:
     choices = build_choice_list(res, lang)
     if choices == []:
         print(f"{Color.RED}err: {Style.RESET_ALL}Series not found! {Color.BLUE}{series}{Style.RESET_ALL}")
-        return None, None, None
+        return None
     choice = survey.routines.select("Select TV Show: ", options=choices)
     return response.json()["data"][choice]["id"].removeprefix("series-")
 
@@ -235,7 +247,7 @@ def get_season_type(seriesid: str, token: str, specifier: str = "") -> str:
 
 
 @cache
-def get_episodelist(seriesid: str, seasonType: str, lang: str, token: str) -> tuple[list, str, str]:
+def get_episodelist(seriesid: str, seasonType: str, lang: str, token: str) -> tuple[list[dict[str, str | dict[str, str]]], str, str]:
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(f"https://api4.thetvdb.com/v4/series/{seriesid}/episodes/{seasonType}/{lang}?page=0", timeout=10, headers=headers)
     data = response.json()["data"]
@@ -255,18 +267,22 @@ def get_episodelist(seriesid: str, seasonType: str, lang: str, token: str) -> tu
 
 
 @cache
-def get_series_from_tvdb(series: str, token: str, lang: str) -> tuple[list | None, str, str]:
+def get_series_from_tvdb(series: str, token: str, lang: str) -> tuple[list[dict[str, str | dict[str, str]]] | None, str, str]:
     if token is None:
         return None, "", ""
     seriesid = find_series_id(series, token, lang)
-    seasonType = get_season_type(seriesid, token)
-    return get_episodelist(seriesid, seasonType, lang, token)
+    if seriesid is not None:
+        seasonType = get_season_type(seriesid, token)
+        return get_episodelist(seriesid, seasonType, lang, token)
+    return None, "", ""
 
 
-def change_season_type(series: str, token: str, lang: str):
+def change_season_type(series: str, token: str, lang: str) -> tuple[list[dict[str, str | dict[str, str]]] | None, list[dict[str, str | dict[str, str]]] | None, str, str]:
     if token is None:
         return None, "", ""
     seriesid = find_series_id(series, token, lang)
+    if seriesid is None:
+        return None, None, "", ""
     currSeasonType = get_season_type(seriesid, token, "Current")
     destSeasonType = get_season_type(seriesid, token, "Desired")
     currlist, name, year = get_episodelist(seriesid, currSeasonType, lang, token)
@@ -363,7 +379,7 @@ def get_episode(series: str, file: str, seriesobj: list) -> tuple[str | None, st
                 "comment": comment,
                 "title": title,
                 "date": date,
-            }
+            }  # type: ignore
             return season, name, metadata
     return None, None, None
 

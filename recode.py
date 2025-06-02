@@ -144,7 +144,7 @@ def recode(
     attachmentstreams = []
 
     changealang: list[dict[str, str]] = []
-    dispositions: dict[dict[str, str | list[str]]] = {}
+    dispositions: dict[str, dict[str, str | list[str]]] = {}
 
     astreams = []
     sstreams = []
@@ -261,6 +261,8 @@ def recode(
                     subfile = [os.path.join(subfile, fil) for fil in subfil]
                 else:
                     subfile = [subfile]
+        elif subdir != "" and os.path.isfile(subdir):
+            subfile = [subdir]
         else:
             subfile = [get_subtitles_from_ost(token=apitokens.get("opensub", None), metadata=metadata, lang=sublang, file=file)]
         try:
@@ -613,7 +615,7 @@ def main():
                             shutil.move(old, new)
             else:
                 season, name = change_episode_number(series, subdir, currseriesobj, destseriesobj)
-                if name is not None:
+                if name is not None and season is not None:
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
                         os.makedirs(os.path.join(parentfolder, series, season))
                     old = os.path.join(folder, dire)
