@@ -58,6 +58,7 @@ def audio(
     adefault: dict,
     astreams: list,
     printlines: list,
+    dispositions: dict[str, dict[str, str | list[str]]],
     changealang: list,
     lang: str = "eng",
 ):
@@ -68,5 +69,13 @@ def audio(
         stream.tags.language = lang
     if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None, lang]:
         arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang)
+        dispositiontypes = [dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]]
+        dispositions["a" + str(aindex)] = {
+            "stype": "a",
+            "index": aindex,
+            "title": stream.tags.title,
+            "lang": stream.tags.language,
+            "types": dispositiontypes,
+        }
         aindex += 1
     return arecoding, aindex, changealang

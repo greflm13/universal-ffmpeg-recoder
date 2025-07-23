@@ -1,39 +1,36 @@
 {
-    "folders": [
-        {
-            "path": "./"
-        }
+  "folders": [
+    {
+      "path": "./"
+    }
+  ],
+  "settings": {
+    "black-formatter.args": ["-l 240"],
+    "ruff.lineLength": 240
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug recode.py",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/recode.py",
+        "console": "integratedTerminal",
+        "args": ["-t", "rename", "-l", "jpn", "--infolang", "eng"],
+        "cwd": "/mnt/nfs/series/jpn/Frieren Beyond Journey's End (BD Remux 1080p AVC FLAC AAC) [Dual Audio] [PMR]"
+      },
+      {
+        "name": "Generate Schema",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/getjsonschema.py",
+        "console": "externalTerminal",
+        "args": [],
+        "cwd": "/mnt/nfs"
+      }
     ],
-    "settings": {
-        "black-formatter.args": [
-            "-l 240"
-        ]
-    },
-    "launch": {
-        "version": "0.2.0",
-        "configurations": [
-            {
-                "name": "Debug recode.py",
-                "type": "debugpy",
-                "request": "launch",
-                "program": "${workspaceFolder}/recode.py",
-                "console": "integratedTerminal",
-                "args": ["-t", "rename", "-l", "jpn", "--infolang", "eng"],
-                "cwd": "/mnt/nfs/series/jpn/Frieren Beyond Journey's End (BD Remux 1080p AVC FLAC AAC) [Dual Audio] [PMR]"
-            },
-            {
-                "name": "Generate Schema",
-                "type": "debugpy",
-                "request": "launch",
-                "program": "${workspaceFolder}/getjsonschema.py",
-                "console": "externalTerminal",
-                "args": [],
-                "cwd": "/mnt/nfs"
-            }
-        ],
-        "compounds": []
-    },
-    "extensions": {"recommendations": [
-        "charliermarsh.ruff",
-    ]}
+    "compounds": []
+  },
+  "extensions": { "recommendations": ["charliermarsh.ruff"] }
 }

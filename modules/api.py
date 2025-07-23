@@ -5,6 +5,7 @@ import configparser
 import urllib.parse
 
 from functools import cache
+from typing import TypedDict, Optional
 
 import requests
 import survey
@@ -23,7 +24,17 @@ VIDEO_CONTAINERS = [
 # fmt: on
 
 
-def api_login(config: str) -> dict[str, str | dict[str, str]]:
+class OpenSubtitlesToken(TypedDict):
+    token: Optional[str]
+    api_key: Optional[str]
+
+
+class APITokens(TypedDict):
+    thetvdb: Optional[str]
+    opensub: OpenSubtitlesToken
+
+
+def api_login(config: str) -> APITokens:
     if not os.path.exists(config):
         os.mknod(config)
 
@@ -60,7 +71,7 @@ def api_login(config: str) -> dict[str, str | dict[str, str]]:
     except KeyError:
         opensubtitlestoken = None
 
-    tokens = {"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": conf.get("opensubtitles", "apikey")}}
+    tokens = APITokens({"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": conf.get("opensubtitles", "apikey")}})
     return tokens
 
 
@@ -71,7 +82,7 @@ def logout(token):
     )
 
 
-def get_movie_name(file: str, token: str, lang: str, stype: str = "single"):
+def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single"):
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
             match = re.search(pattern=r"(.*)(\d{4}(?!p))", string=file)
@@ -163,7 +174,7 @@ def build_choice_list(series_list: list[dict[str, str | dict[str, str]]], lang: 
         else:
             name = series["name"]
         if series.get("overviews", False):
-            overview = series["overviews"].get(lang, series["overviews"].get(series["primary_language"])) # type: ignore
+            overview = series["overviews"].get(lang, series["overviews"].get(series["primary_language"]))  # type: ignore
         else:
             overview = ""
         if overview is None:
@@ -206,7 +217,7 @@ def find_series_id(series: str, token: str, lang: str) -> str | None:
     match = re.search(r"\((\d{4})\)", series)
     try:
         seriesyear = match.groups()[0]  # type: ignore
-        queryseries = urllib.parse.quote(series.removesuffix(f"({seriesyear})").strip())
+        queryseries = urllib.parse.quote(series[: match.start()].strip())
     except AttributeError:
         seriesyear = ""
         queryseries = urllib.parse.quote(re.search(r"[A-Za-z._-]+", series)[0].replace(".", " ").replace("-", " ").replace("_", " ").upper().removesuffix("S").strip())  # type: ignore
@@ -384,7 +395,7 @@ def get_episode(series: str, file: str, seriesobj: list) -> tuple[str | None, st
     return None, None, None
 
 
-def get_subtitles_from_ost(token: dict[str, str], metadata: dict, lang: str, file: str):
+def get_subtitles_from_ost(token: OpenSubtitlesToken, metadata: dict, lang: str, file: str):
     if token.get("token", None) is None:
         return None
     headers = {"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.1", "Authorization": f"Bearer {token['token']}"}

@@ -38,6 +38,14 @@ def subtitles(
         obj = stream.to_dict()
         obj["newindex"] = sindex
         sstreams.append(obj)
+        dispositiontypes = [dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]]
+        dispositions["s" + str(sindex)] = {
+            "stype": "s",
+            "index": sindex,
+            "title": stream.tags.title,
+            "lang": stream.tags.language,
+            "types": dispositiontypes,
+        }
         update_subtitle_default(sdefault, stream, sindex, dispositions, lang)
         sindex += 1
     return sindex
@@ -67,13 +75,15 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
     if subtitle_type == "forced" or stream.disposition.forced:
         stype = "s"
         if dispositions.get(stype + str(sindex), False):
-            dispositions.get(stype + str(sindex))["types"].append("forced")
+            if "forced" not in dispositions.get(stype + str(sindex))["types"]:
+                dispositions.get(stype + str(sindex))["types"].append("forced")
         else:
             dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["forced"]}
         stream.disposition.forced = True
     if subtitle_type == "sdh" or stream.disposition.hearing_impaired:
         stype = "s"
         if dispositions.get(stype + str(sindex), False):
-            dispositions.get(stype + str(sindex))["types"].append("hearing_impaired")
+            if "hearing_impaired" not in dispositions.get(stype + str(sindex))["types"]:
+                dispositions.get(stype + str(sindex))["types"].append("hearing_impaired")
         else:
             dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["hearing_impaired"]}
