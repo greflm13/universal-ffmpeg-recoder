@@ -39,7 +39,19 @@ def parse_args() -> argparse.Namespace:
         "-l",
         "--lang",
         help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language",
-        choices=["eng", "deu", "spa", "jpn", "ger", "rus", "fin", "kor", "ara", "fre"],
+        choices=[
+            "ara",
+            "chi",
+            "deu",
+            "eng",
+            "fin",
+            "fre",
+            "ger",
+            "jpn",
+            "kor",
+            "rus",
+            "spa",
+        ],
         default="eng",
         dest="lang",
         metavar="LANG",
@@ -362,6 +374,8 @@ def recode(
             typ = "audio"
         elif disposition["stype"] == "v":
             typ = "video"
+        if disposition["types"] == []:
+            disposition["types"] = ["none"]
         ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", "+".join(disposition["types"])])
         if typ == "subtitle":
             before = " ".join(sorted([k for k, v in sstreams[int(disposition["index"])]["disposition"].items() if v]))
@@ -450,7 +464,7 @@ def recode(
         print(line)
     for line in printlines:
         print(line)
-    # print(" ".join(ffmpeg_command))
+    print(" ".join(ffmpeg_command))
 
     timestart = datetime.datetime.now()
     print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
