@@ -109,9 +109,7 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                     succ = False
                     while not succ:
                         try:
-                            response = requests.get(
-                                f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"}
-                            )
+                            response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
                             succ = True
                         except requests.exceptions.ReadTimeout:
                             succ = False
@@ -170,7 +168,7 @@ def build_choice_list(series_list: list[dict[str, str | dict[str, str]]], lang: 
 
     for series in series_list:
         if series.get("translations", False):
-            name = series["translations"].get("eng", series["name"])  # type: ignore
+            name = series["translations"].get(lang, series["name"])  # type: ignore
         else:
             name = series["name"]
         if series.get("overviews", False):
@@ -294,8 +292,8 @@ def change_season_type(series: str, token: str, lang: str) -> tuple[list[dict[st
     seriesid = find_series_id(series, token, lang)
     if seriesid is None:
         return None, None, "", ""
-    currSeasonType = get_season_type(seriesid, token, "Current")
-    destSeasonType = get_season_type(seriesid, token, "Desired")
+    currSeasonType = get_season_type(seriesid, token, " Current")
+    destSeasonType = get_season_type(seriesid, token, " Desired")
     currlist, name, year = get_episodelist(seriesid, currSeasonType, lang, token)
     destlist, name, year = get_episodelist(seriesid, destSeasonType, lang, token)
     return currlist, destlist, name, year
@@ -303,95 +301,111 @@ def change_season_type(series: str, token: str, lang: str) -> tuple[list[dict[st
 
 def change_episode_number(series: str, file: str, seriesobj: list, destobj: list) -> tuple[str | None, str | None]:
     if os.path.splitext(file)[1] in VIDEO_CONTAINERS:
-        match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})*)", file)
+        match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})+)", file)
         if match:
             seasonnum = match.groups()[0]
             episodes = match.groups()[1].replace("e", "E").split("E")
             episodes.remove("")
-            episodeIDs: list[str] = []
-            titles: list[str] = []
-            for episode in episodes:
-                for epi in seriesobj:
-                    if epi["seasonNumber"] == int(seasonnum) and epi["number"] == int(episode):
-                        episodeIDs.append(epi["id"])
-                        break
-
-            seasonnum = ""
-            ep = ""
-
-            for eid in episodeIDs:
-                for epi in destobj:
-                    if epi["id"] == eid:
-                        if isinstance(epi["name"], str):
-                            titles.append(epi["name"])
-                        else:
-                            titles.append("")
-                        seasonnum = epi["seasonNumber"]
-                        ep = ep + f"E{epi['number']:02d}"
-                        break
-
-            if seasonnum == "":
-                return "Uncategorized", file
-
-            if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
-                title = re.sub(r"\(\d+\)", "", titles[0]).strip()
+        else:
+            match = re.search(r"(([Ee]\.?\d{1,4})+)", file)
+            if match:
+                seasonnum = "01"
+                episodes = match.groups()[0].replace("e", "E").replace(".", "").split("E")
+                episodes.remove("")
             else:
-                title = " + ".join(titles)
-            if title != "":
-                name = f"{series} - S{seasonnum:02d}{ep} - {title.replace('/', '-')}.mkv"
-            else:
-                name = f"{series} - S{seasonnum:02d}{ep}.mkv"
-            season = f"Season {seasonnum:02d}"
-            return season, name
+                return None, None
+        episodeIDs: list[str] = []
+        titles: list[str] = []
+        for episode in episodes:
+            for epi in seriesobj:
+                if epi["seasonNumber"] == int(seasonnum) and epi["number"] == int(episode):
+                    episodeIDs.append(epi["id"])
+                    break
+
+        seasonnum = ""
+        ep = ""
+
+        for eid in episodeIDs:
+            for epi in destobj:
+                if epi["id"] == eid:
+                    if isinstance(epi["name"], str):
+                        titles.append(epi["name"])
+                    else:
+                        titles.append("")
+                    seasonnum = epi["seasonNumber"]
+                    ep = ep + f"E{epi['number']:02d}"
+                    break
+
+        if seasonnum == "":
+            return "Uncategorized", file
+
+        if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
+            title = re.sub(r"\(\d+\)", "", titles[0]).strip()
+        else:
+            title = " + ".join(titles)
+        if title != "":
+            name = f"{series} - S{seasonnum:02d}{ep} - {title.replace('/', '-')}.mkv"
+        else:
+            name = f"{series} - S{seasonnum:02d}{ep}.mkv"
+        season = f"Season {seasonnum:02d}"
+        return season, name
 
     return None, None
 
 
 def get_episode(series: str, file: str, seriesobj: list) -> tuple[str | None, str | None, dict[str, str] | None]:
     if os.path.splitext(file)[1] in VIDEO_CONTAINERS:
-        match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})*)", file)
+        match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})+)", file)
         if match:
             seasonnum = match.groups()[0]
             episodes = match.groups()[1].replace("e", "E").split("E")
             episodes.remove("")
-            ep = ""
-            titles: list[str] = []
-            comments: list[str] = []
-            date = None
-            for episode in episodes:
-                ep = ep + "E" + episode.rjust(2, "0")
-                for epi in seriesobj:
-                    if epi["seasonNumber"] == int(seasonnum) and epi["number"] == int(episode):
-                        if isinstance(epi["name"], str):
-                            titles.append(epi["name"])
-                        else:
-                            titles.append("")
-                        if isinstance(epi["overview"], str):
-                            comments.append(epi["overview"].replace("\n", "").strip())
-                        date = epi["aired"]
-                        break
-            if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
-                title = re.sub(r"\(\d+\)", "", titles[0]).strip()
+        else:
+            match = re.search(r"(([Ee]\.?\d{1,4})+)", file)
+            if match:
+                seasonnum = "01"
+                episodes = match.groups()[0].replace("e", "E").split("E")
+                episodes.remove("")
             else:
-                title = " + ".join(titles)
-            if title != "":
-                name = f"{series} - S{seasonnum.rjust(2, '0')}{ep} - {title.replace('/', '-')}.mkv"
-            else:
-                name = f"{series} - S{seasonnum.rjust(2, '0')}{ep}.mkv"
-            season = f"Season {seasonnum.rjust(2, '0')}"
-            try:
-                comment = " ".join(comments)
-            except TypeError:
-                comment = None
-            metadata: dict[str, str] = {
-                "episode_id": ", ".join(epi.removeprefix("0") for epi in episodes),
-                "season_number": seasonnum.removeprefix("0"),
-                "show": series,
-                "comment": comment,
-                "title": title,
-                "date": date,
-            }  # type: ignore
-            return season, name, metadata
+                return None, None, None
+        ep = ""
+        titles: list[str] = []
+        comments: list[str] = []
+        date = None
+        for episode in episodes:
+            ep = ep + "E" + episode.rjust(2, "0")
+            for epi in seriesobj:
+                if epi["seasonNumber"] == int(seasonnum) and epi["number"] == int(episode):
+                    if isinstance(epi["name"], str):
+                        titles.append(epi["name"])
+                    else:
+                        titles.append("")
+                    if isinstance(epi["overview"], str):
+                        comments.append(epi["overview"].replace("\n", "").strip())
+                    date = epi["aired"]
+                    break
+        if len(titles) == 2 and re.sub(r"\(\d+\)", "", titles[0]).strip() == re.sub(r"\(\d+\)", "", titles[1]).strip():
+            title = re.sub(r"\(\d+\)", "", titles[0]).strip()
+        else:
+            title = " + ".join(titles)
+        if title != "":
+            name = f"{series} - S{seasonnum.rjust(2, '0')}{ep} - {title.replace('/', '-')}.mkv"
+        else:
+            name = f"{series} - S{seasonnum.rjust(2, '0')}{ep}.mkv"
+        season = f"Season {seasonnum.rjust(2, '0')}"
+        try:
+            comment = " ".join(comments)
+        except TypeError:
+            comment = None
+        metadata: dict[str, str] = {
+            "episode_id": ", ".join(epi.removeprefix("0") for epi in episodes),
+            "season_number": seasonnum.removeprefix("0"),
+            "show": series,
+            "comment": comment,
+            "title": title,
+            "date": date,
+        }  # type: ignore
+        return season, name, metadata
     return None, None, None
 
 

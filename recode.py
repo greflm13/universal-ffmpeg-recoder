@@ -379,6 +379,8 @@ def recode(
         ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", "+".join(disposition["types"])])
         if typ == "subtitle":
             before = " ".join(sorted([k for k, v in sstreams[int(disposition["index"])]["disposition"].items() if v]))
+            if before == "":
+                before = "none"
             after = " ".join(sorted(disposition["types"]))
             if before != after:
                 printlines.append(
@@ -387,6 +389,8 @@ def recode(
                 changedefault = True
         elif typ == "audio":
             before = " ".join(sorted([k for k, v in astreams[int(disposition["index"])]["disposition"].items() if v]))
+            if before == "":
+                before = "none"
             after = " ".join(sorted(disposition["types"]))
             if before != after:
                 printlines.append(
@@ -464,7 +468,7 @@ def recode(
         print(line)
     for line in printlines:
         print(line)
-    print(" ".join(ffmpeg_command))
+    # print(" ".join(ffmpeg_command))
 
     timestart = datetime.datetime.now()
     print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
