@@ -64,6 +64,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265", "av1"], dest="codec", metavar="CODEC", default="av1")
     parser.add_argument("-b", "--bit", help="Select bit depth", required=False, choices=["8", "10"], dest="bit", metavar="BIT", default="10")
     parser.add_argument("-o", "--output", help="Output folder", required=False, default="", dest="output", metavar="DIR", type=str)
+    parser.add_argument("--copy", help="Don't recode video streams, just copy them", required=False, action="store_true", dest="copy")
     parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
     parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=["eng", "deu"], dest="infolang")
     parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=["eng", "ger"], dest="sublang")
@@ -82,7 +83,7 @@ def rename_keys_to_lower(iterable):
     return iterable
 
 
-def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang: str, sublang: str, subdir: str = "", codec: str = "h265", bit: int = 10, output: str = ""):
+def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang: str, sublang: str, subdir: str = "", codec: str = "h265", bit: int = 10, output: str = "", copy: bool = False):
     if apitokens is None:
         apitokens = APITokens(thetvdb=None, opensub={"api_key": None, "token": None})
     series = os.path.basename(folder)
@@ -111,6 +112,7 @@ def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang:
                         codec=codec,
                         bit=bit,
                         output=output,
+                        copy=copy,
                     )
         else:
             season, name, metadata = get_episode(series, dire, seriesobj)
@@ -129,6 +131,7 @@ def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang:
                     codec=codec,
                     bit=bit,
                     output=output,
+                    copy=copy,
                 )
 
 
@@ -145,6 +148,7 @@ def recode(
     bit: int = 10,
     stype: str = "single",
     output: str = "",
+    copy: bool = False,
 ):
     prelines = []
     midlines = []
@@ -251,7 +255,7 @@ def recode(
     printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------{Style.RESET_ALL}")
 
     for stream in videostreams:
-        vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, dispositions, HWACC, codec, bit)
+        vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, dispositions, HWACC, codec, bit, copy)
 
     for stream in audiostreams:
         arecoding, aindex, changealang = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, dispositions, changealang, lang)
@@ -551,6 +555,7 @@ def main():
                     bit=int(args.bit),
                     stype="single",
                     output=args.output,
+                    copy=args.copy,
                 )
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
@@ -569,6 +574,7 @@ def main():
                         bit=int(args.bit),
                         stype="multi",
                         output=args.output,
+                        copy=args.copy,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -590,6 +596,7 @@ def main():
                         codec=args.codec,
                         bit=int(args.bit),
                         output=args.output,
+                        copy=args.copy,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -610,6 +617,7 @@ def main():
                     codec=args.codec,
                     bit=int(args.bit),
                     output=args.output,
+                    copy=args.copy,
                 )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'

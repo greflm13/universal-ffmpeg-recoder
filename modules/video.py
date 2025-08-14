@@ -4,7 +4,7 @@ from colorama import Style
 from modules.ffprobe import Stream, StreamTags
 
 
-def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list, dispositions: dict[str, dict[str, str | list[str]]], hwacc: str | None, codec="av1", bit=10):
+def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list, dispositions: dict[str, dict[str, str | list[str]]], hwacc: str | None, codec="av1", bit=10, copy=False):
     codecd = {"name": "av1", "swenc": "libsvtav1", "amdenc": "av1_amf", "nvdenc": "av1_nvenc"}
     if codec == "av1":
         codecd = {"name": "av1", "swenc": "libsvtav1", "amdenc": "av1_amf", "nvdenc": "av1_nvenc"}
@@ -14,7 +14,7 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
         codecd = {"name": "h264", "swenc": "libx264", "amdenc": "h264_amf", "nvdenc": "h264_nvenc"}
     if stream.tags is None:
         stream.tags = StreamTags(title=None)
-    if (stream.codec_name != codecd["name"] or (bit == 8 and stream.pix_fmt != "yuv420p")) and not stream.disposition.attached_pic:
+    if not copy and (stream.codec_name != codecd["name"] or (bit == 8 and stream.pix_fmt != "yuv420p")) and not stream.disposition.attached_pic:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         if hwacc == "AMF":
             ffmpeg_recoding.extend([f"-c:v:{vindex}", codecd["amdenc"]])
