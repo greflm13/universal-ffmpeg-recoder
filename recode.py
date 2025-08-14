@@ -623,7 +623,7 @@ def main():
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
         else:
-            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang, infolang=infolang, sublang=sublang, subdir=args.subdir, codec=args.codec, bit=int(args.bit), output=args.output)
+            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang, infolang=infolang, sublang=sublang, subdir=args.subdir, codec=args.codec, bit=int(args.bit), output=args.output, copy=args.copy)
     elif args.contentype == "rename":
         folder = os.getcwd()
         series = os.path.basename(folder)
