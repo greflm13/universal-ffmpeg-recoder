@@ -94,47 +94,51 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                 output_file = f"{movie_name}({year}).mkv"
                 if token is None:
                     return output_file, {"title": f"{movie_name}({year})"}
-                succ = False
-                while not succ:
-                    try:
-                        response = requests.get(
-                            f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}&language={lang}",
-                            timeout=10,
-                            headers={"Authorization": f"Bearer {token}"},
-                        )
-                        succ = True
-                    except requests.exceptions.ReadTimeout:
-                        succ = False
-                if response.status_code != 200:  # type: ignore
+                found = False
+                while not found:
                     succ = False
                     while not succ:
                         try:
-                            response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+                            response = requests.get(
+                                f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}&language={lang}",
+                                timeout=10,
+                                headers={"Authorization": f"Bearer {token}"},
+                            )
                             succ = True
                         except requests.exceptions.ReadTimeout:
                             succ = False
-                try:
-                    ret = response.json()["data"]  # type: ignore
-                    if len(ret) > 1 and stype == "single":
-                        choices = [f"{movie['slug'].ljust(30)[:30]} {movie.get('year')}: {movie.get('overviews', {}).get(lang, movie.get('overview', ''))[:180]}" for movie in ret]
-                        choice = survey.routines.select("Select Movie: ", options=choices)
-                    else:
-                        choice = 0
-                    ret = ret[choice]
-                    if "overviews" in ret and lang in ret["overviews"]:
-                        comment = ret["overviews"][lang]
-                    elif "overviews" in ret and "eng" in ret["overviews"]:
-                        comment = ret["overviews"]["eng"]
-                    if "first_air_time" in ret and ret["first_air_time"] != "":
-                        date = ret["first_air_time"]
-                    if "translations" in ret and lang in ret["translations"]:
-                        metadata = {"comment": comment, "title": f"{ret['translations'][lang]} ({ret['year']})", "date": date}
-                        output_file = f"{ret['translations'][lang].replace('/', '-')} ({ret['year']}).mkv"
-                    else:
-                        metadata = {"comment": comment, "title": ret["extended_title"].replace("/", "-"), "date": date}
-                        output_file = f"{ret['extended_title']}.mkv"
-                except IndexError:
-                    metadata = {"title": f"{movie_name}({year})"}
+                    if response.status_code != 200:  # type: ignore
+                        succ = False
+                        while not succ:
+                            try:
+                                response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
+                                succ = True
+                            except requests.exceptions.ReadTimeout:
+                                succ = False
+                    try:
+                        ret = response.json()["data"]  # type: ignore
+                        if len(ret) > 1 and stype == "single":
+                            choices = [f"{movie['slug'].ljust(30)[:30]} {movie.get('year')}: {movie.get('overviews', {}).get(lang, movie.get('overview', ''))[:180]}" for movie in ret]
+                            choice = survey.routines.select("Select Movie: ", options=choices)
+                        else:
+                            choice = 0
+                        ret = ret[choice]
+                        if "overviews" in ret and lang in ret["overviews"]:
+                            comment = ret["overviews"][lang]
+                        elif "overviews" in ret and "eng" in ret["overviews"]:
+                            comment = ret["overviews"]["eng"]
+                        if "first_air_time" in ret and ret["first_air_time"] != "":
+                            date = ret["first_air_time"]
+                        if "translations" in ret and lang in ret["translations"]:
+                            metadata = {"comment": comment, "title": f"{ret['translations'][lang]} ({ret['year']})", "date": date}
+                            output_file = f"{ret['translations'][lang].replace('/', '-')} ({ret['year']}).mkv"
+                        else:
+                            metadata = {"comment": comment, "title": ret["extended_title"].replace("/", "-"), "date": date}
+                            output_file = f"{ret['extended_title']}.mkv"
+                        found = True
+                    except IndexError:
+                        movie_name = input("Not found! Enter search string: ")
+                        year = ""
             else:
                 output_file: str = os.path.splitext(file)[0] + ".mkv"
                 metadata = {"title": os.path.splitext(file)[0]}

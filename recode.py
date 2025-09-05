@@ -272,7 +272,7 @@ def recode(
         if subdir != "" and os.path.isdir(subdir):
             episode = re.findall(r"[Ss]\d{2,4}[Ee]\d{2,4}", str(path))[0]
             files = os.listdir(subdir)
-            subfile = [fil for fil in files if episode in fil]
+            subfile = [fil for fil in files if episode.lower() in fil.lower()]
             if len(subfile) == 1:
                 subfile = os.path.join(subdir, subfile[0])
                 if os.path.isdir(subfile):
@@ -287,7 +287,7 @@ def recode(
         try:
             for fil in subfile:
                 p = Popen(
-                    ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", str(fil), "-strict", "-2"],
+                    ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", os.path.realpath(fil), "-strict", "-2"],
                     stdout=PIPE,
                     stderr=PIPE,
                 )
@@ -299,7 +299,7 @@ def recode(
                 except Exception:
                     ...
                 prelines.append(f"{Color.RED}Adding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(fil)}{Style.RESET_ALL}")
-                ffmpeg_command.extend(["-i", fil])
+                ffmpeg_command.extend(["-i", os.path.realpath(fil)])
                 for stream in sub.streams:
                     if stream.tags is None:
                         stream.tags = StreamTags.from_dict({"title": None, "language": sublang})
