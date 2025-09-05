@@ -68,6 +68,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
     parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=["eng", "deu"], dest="infolang")
     parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=["eng", "ger"], dest="sublang")
+    parser.add_argument("--searchstring", help="Manual search string for TVDB API", required=False, default=None, dest="searchstring", metavar="SEARCHSTRING")
     return parser.parse_args()
 
 
@@ -88,7 +89,7 @@ def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang:
         apitokens = APITokens(thetvdb=None, opensub={"api_key": None, "token": None})
     series = os.path.basename(folder)
     parentfolder = output if output != "" else os.path.realpath(folder).removesuffix(f"/{series}")
-    seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=infolang)
+    seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=infolang, searchstring=searchstring)
     if seriesobj is None:
         return
     if year != "":
@@ -149,6 +150,7 @@ def recode(
     stype: str = "single",
     output: str = "",
     copy: bool = False,
+    searchstring: str | None = None,
 ):
     prelines = []
     midlines = []
@@ -192,7 +194,7 @@ def recode(
         apitokens = APITokens(thetvdb=None, opensub={"api_key": None, "token": None})
 
     if path is None:
-        output_file, metadata = get_movie_name(file, apitokens["thetvdb"], lang=infolang, stype=stype)
+        output_file, metadata = get_movie_name(file, apitokens["thetvdb"], lang=infolang, stype=stype, searchstring=searchstring)
         if output_file is None:
             return
         output_dir = output if output != "" else os.path.realpath(file).removesuffix(file)
@@ -556,6 +558,7 @@ def main():
                     stype="single",
                     output=args.output,
                     copy=args.copy,
+                    searchstring=args.searchstring,
                 )
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
@@ -575,6 +578,7 @@ def main():
                         stype="multi",
                         output=args.output,
                         copy=args.copy,
+                        searchstring=args.searchstring,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -597,6 +601,7 @@ def main():
                         bit=int(args.bit),
                         output=args.output,
                         copy=args.copy,
+                        searchstring=args.searchstring,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -618,17 +623,30 @@ def main():
                     bit=int(args.bit),
                     output=args.output,
                     copy=args.copy,
+                    searchstring=args.searchstring,
                 )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
                 raise FileNotFoundError(error)
         else:
-            recode_series(os.getcwd(), apitokens=apitokens, lang=args.lang, infolang=infolang, sublang=sublang, subdir=args.subdir, codec=args.codec, bit=int(args.bit), output=args.output, copy=args.copy)
+            recode_series(
+                os.getcwd(),
+                apitokens=apitokens,
+                lang=args.lang,
+                infolang=infolang,
+                sublang=sublang,
+                subdir=args.subdir,
+                codec=args.codec,
+                bit=int(args.bit),
+                output=args.output,
+                copy=args.copy,
+                searchstring=args.searchstring,
+            )
     elif args.contentype == "rename":
         folder = os.getcwd()
         series = os.path.basename(folder)
         parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
-        seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=infolang)
+        seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=infolang, searchstring=args.searchstring)
         if year != "":
             series = f"{seriesname} ({year})"
         for dire in sorted(os.listdir(folder)):

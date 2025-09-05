@@ -5,7 +5,7 @@ import configparser
 import urllib.parse
 
 from functools import cache
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Any
 
 import requests
 import survey
@@ -82,10 +82,15 @@ def logout(token):
     )
 
 
-def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single"):
+def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single", searchstring: str | None = None) -> tuple[str, dict[str, str] | dict[str, Any]]:
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
-            match = re.search(pattern=r"(.*)(\d{4}(?!p))", string=file)
+            metadata = {"title": os.path.splitext(file)[0]}
+            output_file: str = os.path.splitext(file)[0] + ".mkv"
+            if searchstring is not None:
+                match = re.search(pattern=r"(.*)(\d{4}(?![pi]))", string=searchstring)
+            else:
+                match = re.search(pattern=r"(.*)(\d{4}(?![pi]))", string=file)
             if match:
                 comment = None
                 date = None
@@ -94,54 +99,51 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                 output_file = f"{movie_name}({year}).mkv"
                 if token is None:
                     return output_file, {"title": f"{movie_name}({year})"}
-                found = False
-                while not found:
+            found = False
+            while not found:
+                succ = False
+                while not succ:
+                    try:
+                        response = requests.get(
+                            f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}&language={lang}",
+                            timeout=10,
+                            headers={"Authorization": f"Bearer {token}"},
+                        )
+                        succ = True
+                    except requests.exceptions.ReadTimeout:
+                        succ = False
+                if response.status_code != 200:  # type: ignore
                     succ = False
                     while not succ:
                         try:
-                            response = requests.get(
-                                f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}&language={lang}",
-                                timeout=10,
-                                headers={"Authorization": f"Bearer {token}"},
-                            )
+                            response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
                             succ = True
                         except requests.exceptions.ReadTimeout:
                             succ = False
-                    if response.status_code != 200:  # type: ignore
-                        succ = False
-                        while not succ:
-                            try:
-                                response = requests.get(f"https://api4.thetvdb.com/v4/search?query={movie_name}&type=movie&year={year}", timeout=10, headers={"Authorization": f"Bearer {token}"})
-                                succ = True
-                            except requests.exceptions.ReadTimeout:
-                                succ = False
-                    try:
-                        ret = response.json()["data"]  # type: ignore
-                        if len(ret) > 1 and stype == "single":
-                            choices = [f"{movie['slug'].ljust(30)[:30]} {movie.get('year')}: {movie.get('overviews', {}).get(lang, movie.get('overview', ''))[:180]}" for movie in ret]
-                            choice = survey.routines.select("Select Movie: ", options=choices)
-                        else:
-                            choice = 0
-                        ret = ret[choice]
-                        if "overviews" in ret and lang in ret["overviews"]:
-                            comment = ret["overviews"][lang]
-                        elif "overviews" in ret and "eng" in ret["overviews"]:
-                            comment = ret["overviews"]["eng"]
-                        if "first_air_time" in ret and ret["first_air_time"] != "":
-                            date = ret["first_air_time"]
-                        if "translations" in ret and lang in ret["translations"]:
-                            metadata = {"comment": comment, "title": f"{ret['translations'][lang]} ({ret['year']})", "date": date}
-                            output_file = f"{ret['translations'][lang].replace('/', '-')} ({ret['year']}).mkv"
-                        else:
-                            metadata = {"comment": comment, "title": ret["extended_title"].replace("/", "-"), "date": date}
-                            output_file = f"{ret['extended_title']}.mkv"
-                        found = True
-                    except IndexError:
-                        movie_name = input("Not found! Enter search string: ")
-                        year = ""
-            else:
-                output_file: str = os.path.splitext(file)[0] + ".mkv"
-                metadata = {"title": os.path.splitext(file)[0]}
+                try:
+                    ret = response.json()["data"]  # type: ignore
+                    if len(ret) > 1 and stype == "single":
+                        choices = [f"{movie['slug'].ljust(30)[:30]} {movie.get('year')}: {movie.get('overviews', {}).get(lang, movie.get('overview', ''))[:180]}" for movie in ret]
+                        choice = survey.routines.select("Select Movie: ", options=choices)
+                    else:
+                        choice = 0
+                    ret = ret[choice]
+                    if "overviews" in ret and lang in ret["overviews"]:
+                        comment = ret["overviews"][lang]
+                    elif "overviews" in ret and "eng" in ret["overviews"]:
+                        comment = ret["overviews"]["eng"]
+                    if "first_air_time" in ret and ret["first_air_time"] != "":
+                        date = ret["first_air_time"]
+                    if "translations" in ret and lang in ret["translations"]:
+                        metadata = {"comment": comment, "title": f"{ret['translations'][lang]} ({ret['year']})", "date": date}
+                        output_file = f"{ret['translations'][lang].replace('/', '-')} ({ret['year']}).mkv"
+                    else:
+                        metadata = {"comment": comment, "title": ret["extended_title"].replace("/", "-"), "date": date}
+                        output_file = f"{ret['extended_title']}.mkv"
+                    found = True
+                except IndexError:
+                    movie_name = input("Not found! Enter search string: ")
+                    year = ""
             return output_file, metadata
     return None, None
 
@@ -214,9 +216,12 @@ def build_choice_list(series_list: list[dict[str, str | dict[str, str]]], lang: 
 
 
 @cache
-def find_series_id(series: str, token: str, lang: str) -> str | None:
+def find_series_id(series: str, token: str, lang: str, searchstring: str | None = None) -> str | None:
     headers = {"Authorization": f"Bearer {token}"}
-    match = re.search(r"\((\d{4})\)", series)
+    if searchstring is not None:
+        match = re.search(r"\((\d{4})\)", searchstring)
+    else:
+        match = re.search(r"\((\d{4})\)", series)
     try:
         seriesyear = match.groups()[0]  # type: ignore
         queryseries = urllib.parse.quote(series[: match.start()].strip())
@@ -280,20 +285,20 @@ def get_episodelist(seriesid: str, seasonType: str, lang: str, token: str) -> tu
 
 
 @cache
-def get_series_from_tvdb(series: str, token: str, lang: str) -> tuple[list[dict[str, str | dict[str, str]]] | None, str, str]:
+def get_series_from_tvdb(series: str, token: str, lang: str, searchstring: str | None = None) -> tuple[list[dict[str, str | dict[str, str]]] | None, str, str]:
     if token is None:
         return None, "", ""
-    seriesid = find_series_id(series, token, lang)
+    seriesid = find_series_id(series, token, lang, searchstring)
     if seriesid is not None:
         seasonType = get_season_type(seriesid, token)
         return get_episodelist(seriesid, seasonType, lang, token)
     return None, "", ""
 
 
-def change_season_type(series: str, token: str, lang: str) -> tuple[list[dict[str, str | dict[str, str]]] | None, list[dict[str, str | dict[str, str]]] | None, str, str]:
+def change_season_type(series: str, token: str, lang: str, searchstring: str | None = None) -> tuple[list[dict[str, str | dict[str, str]]] | None, list[dict[str, str | dict[str, str]]] | None, str, str]:
     if token is None:
         return None, "", ""
-    seriesid = find_series_id(series, token, lang)
+    seriesid = find_series_id(series, token, lang, searchstring)
     if seriesid is None:
         return None, None, "", ""
     currSeasonType = get_season_type(seriesid, token, " Current")
