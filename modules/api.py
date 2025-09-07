@@ -8,7 +8,7 @@ from functools import cache
 from typing import TypedDict, Optional, Any
 
 import requests
-import survey
+import questionary
 
 from colorama import Fore as Color
 from colorama import Style
@@ -32,6 +32,9 @@ class OpenSubtitlesToken(TypedDict):
 class APITokens(TypedDict):
     thetvdb: Optional[str]
     opensub: OpenSubtitlesToken
+
+
+questionary_style = questionary.Style([("highlighted", "fg:#00bcdc")])
 
 
 def api_login(config: str) -> APITokens:
@@ -82,6 +85,54 @@ def logout(token):
     )
 
 
+def build_choice_list(option_list: list[dict[str, str | dict[str, str]]], lang: str) -> list[str]:
+    filtered_list = []
+    choice_list = []
+    termwidth = os.get_terminal_size().columns
+
+    for option in option_list:
+        if option.get("translations", False):
+            name = option["translations"].get(lang, option["name"])  # type: ignore
+        else:
+            name = option["name"]
+        if option.get("overviews", False):
+            overview = option["overviews"].get(lang, option["overviews"].get(option["primary_language"]))  # type: ignore
+        else:
+            overview = ""
+        if overview is None:
+            overview = ""
+        filtered_list.append(
+            {
+                "slug": option["slug"],
+                "name": name,
+                "year": option.get("year", "    "),
+                "overview": overview.strip(),
+            }
+        )
+
+    slug_max_len = max([len(series["slug"]) for series in filtered_list])
+    name_max_len = max([len(series["name"]) for series in filtered_list])
+
+    constants = slug_max_len + name_max_len + 13
+    free_space = termwidth - constants
+    spacer = "   " + " " * slug_max_len + " | " + " " * name_max_len + " |      | "
+    overview = ""
+
+    for idx, option in enumerate(filtered_list):
+        if constants + len(option["overview"]) > termwidth:
+            lines = split_string_at_whitespace(option["overview"], free_space)
+            for i, line in enumerate(lines):
+                if i == 0:
+                    overview = line
+                else:
+                    overview += "\n" + spacer + line
+        else:
+            overview = option["overview"]
+        choice_list.append(questionary.Choice(title=f"{option['slug'].ljust(slug_max_len)} | {option['name'].ljust(name_max_len)} | {option['year']} | {overview}", value=idx))
+
+    return choice_list
+
+
 def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single", searchstring: str | None = None) -> tuple[str, dict[str, str] | dict[str, Any]]:
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
@@ -123,8 +174,8 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                 try:
                     ret = response.json()["data"]  # type: ignore
                     if len(ret) > 1 and stype == "single":
-                        choices = [f"{movie['slug'].ljust(30)[:30]} {movie.get('year')}: {movie.get('overviews', {}).get(lang, movie.get('overview', ''))[:180]}" for movie in ret]
-                        choice = survey.routines.select("Select Movie: ", options=choices)
+                        choices = build_choice_list(ret, lang)
+                        choice = questionary.select("Select Movie: ", choices=choices, style=questionary_style).ask()
                     else:
                         choice = 0
                     ret = ret[choice]
@@ -149,7 +200,7 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
 
 
 def split_string_at_whitespace(text: str, n: int) -> list[str]:
-    words = text.split()
+    words = text.strip().split()
     lines = []
     current_line = ""
 
@@ -165,54 +216,6 @@ def split_string_at_whitespace(text: str, n: int) -> list[str]:
         lines.append(current_line)
 
     return lines
-
-
-def build_choice_list(series_list: list[dict[str, str | dict[str, str]]], lang: str) -> list[str]:
-    filtered_list = []
-    choice_list = []
-    termwidth = os.get_terminal_size().columns
-
-    for series in series_list:
-        if series.get("translations", False):
-            name = series["translations"].get(lang, series["name"])  # type: ignore
-        else:
-            name = series["name"]
-        if series.get("overviews", False):
-            overview = series["overviews"].get(lang, series["overviews"].get(series["primary_language"]))  # type: ignore
-        else:
-            overview = ""
-        if overview is None:
-            overview = ""
-        filtered_list.append(
-            {
-                "slug": series["slug"],
-                "name": name,
-                "year": series.get("year", "    "),
-                "overview": overview,
-            }
-        )
-
-    slug_max_len = max([len(series["slug"]) for series in filtered_list])
-    name_max_len = max([len(series["name"]) for series in filtered_list])
-
-    constants = slug_max_len + name_max_len + 13
-    free_space = termwidth - constants
-    spacer = " " * slug_max_len + " | " + " " * name_max_len + " |      | "
-    overview = ""
-
-    for series in filtered_list:
-        if constants + len(series["overview"]) > termwidth:
-            lines = split_string_at_whitespace(series["overview"], free_space)
-            for i, line in enumerate(lines):
-                if i == 0:
-                    overview = line
-                else:
-                    overview += "\n" + spacer + line
-        else:
-            overview = series["overview"]
-        choice_list.append(f"{series['slug'].ljust(slug_max_len)} | {series['name'].ljust(name_max_len)} | {series['year']} | {overview}")
-
-    return choice_list
 
 
 @cache
@@ -242,7 +245,7 @@ def find_series_id(series: str, token: str, lang: str, searchstring: str | None 
     if choices == []:
         print(f"{Color.RED}err: {Style.RESET_ALL}Series not found! {Color.BLUE}{series}{Style.RESET_ALL}")
         return None
-    choice = survey.routines.select("Select TV Show: ", options=choices)
+    choice = questionary.select("Select TV Show: ", choices=choices, style=questionary_style).ask()
     return response.json()["data"][choice]["id"].removeprefix("series-")
 
 
@@ -256,9 +259,14 @@ def get_extended_series(seriesid: str, token: str) -> dict:
 def get_season_type(seriesid: str, token: str, specifier: str = "") -> str:
     data = get_extended_series(seriesid, token)
     data = data["seasonTypes"]
+    types = []
     if len(data) > 1:
-        types = [typ["alternateName"] if typ["alternateName"] is not None else typ["name"] for typ in data]
-        choice = survey.routines.select(f"Select{specifier} Season Type: ", options=types)
+        for idx, typ in enumerate(data):
+            if typ["alternateName"] is not None:
+                types.append(questionary.Choice(title=typ["alternateName"], value=idx))
+            else:
+                types.append(questionary.Choice(title=typ["name"], value=idx))
+        choice = questionary.select(f"Select{specifier} Season Type: ", choices=types, style=questionary_style).ask()
         return data[choice]["type"]
     else:
         return "default"
