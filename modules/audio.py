@@ -64,7 +64,9 @@ def audio(
 ):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
-    if stream.tags.language in ["und", None]:
+    if stream.tags.language in ["und", None, "ger"]:
+        if lang == "ger":
+            lang = "deu"
         changealang.append({"index": aindex, "lang": lang})
         stream.tags.language = lang
     if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None, lang]:

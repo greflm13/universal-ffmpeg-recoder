@@ -15,13 +15,19 @@ def subtitles(
     sstreams: list,
     printlines: list,
     dispositions: dict[str, dict[str, str | list[str]]],
+    changeslang: list,
     lang: str,
     file=0,
 ):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
+    if stream.tags.language in ["und", None, "ger"]:
+        if lang == "ger":
+            lang = "deu"
+        changeslang.append({"index": sindex, "lang": lang})
+        stream.tags.language = lang
     if stream.tags.language in ["eng", "ger", "deu", "und", None]:
-        stream.tags.language = "ger" if stream.tags.language == "deu" else stream.tags.language
+        stream.tags.language = "deu" if stream.tags.language == "ger" else stream.tags.language
         if stream.codec_name in ["subrip", "hdmv_pgs_subtitle", "ass", "dvd_subtitle"]:
             ffmpeg_mapping.extend(["-map", f"{file}:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:s:{sindex}", "copy"])
@@ -48,7 +54,7 @@ def subtitles(
         }
         update_subtitle_default(sdefault, stream, sindex, dispositions, lang)
         sindex += 1
-    return sindex
+    return sindex, changeslang
 
 
 def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[str, dict[str, str | list[str]]], lang: str):

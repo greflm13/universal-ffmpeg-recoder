@@ -165,6 +165,7 @@ def recode(
     attachmentstreams: list[Stream] = []
 
     changealang: list[dict[str, str]] = []
+    changeslang: list[dict[str, str]] = []
     dispositions: dict[str, dict[str, str | list[str]]] = {}
 
     astreams = []
@@ -268,7 +269,7 @@ def recode(
             aindex += 1
 
     for stream in subtitlestreams:
-        sindex = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions, sublang)
+        sindex, changeslang = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions, changeslang, sublang)
 
     if sindex == 0:
         if subdir != "" and os.path.isdir(subdir):
@@ -371,6 +372,12 @@ def recode(
         for change in changealang:
             ffmpeg_dispositions.extend([f"-metadata:s:a:{change['index']}", f"language={change['lang']}"])
             printlines.append(f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}a:{change['index']}{Style.RESET_ALL} language to {Color.MAGENTA}{change['lang']}{Style.RESET_ALL}")
+            changedefault = True
+
+    if len(changeslang) > 0:
+        for change in changeslang:
+            ffmpeg_dispositions.extend([f"-metadata:s:s:{change['index']}", f"language={change['lang']}"])
+            printlines.append(f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}s:{change['index']}{Style.RESET_ALL} language to {Color.MAGENTA}{change['lang']}{Style.RESET_ALL}")
             changedefault = True
 
     for disposition in dispositions.values():
