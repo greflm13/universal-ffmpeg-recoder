@@ -22,7 +22,7 @@ def subtitles(
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
     if stream.tags.language in ["und", None, "ger"]:
-        if lang == "ger":
+        if stream.tags.language == "ger":
             lang = "deu"
         changeslang.append({"index": sindex, "lang": lang})
         stream.tags.language = lang

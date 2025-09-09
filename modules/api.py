@@ -175,7 +175,7 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                     ret = response.json()["data"]  # type: ignore
                     if len(ret) > 1 and stype == "single":
                         choices = build_choice_list(ret, lang)
-                        choice = questionary.select("Select Movie: ", choices=choices, style=questionary_style).ask()
+                        choice = questionary.select("Select Movie:\n", choices=choices, style=questionary_style).ask()
                     else:
                         choice = 0
                     ret = ret[choice]
@@ -245,7 +245,7 @@ def find_series_id(series: str, token: str, lang: str, searchstring: str | None 
     if choices == []:
         print(f"{Color.RED}err: {Style.RESET_ALL}Series not found! {Color.BLUE}{series}{Style.RESET_ALL}")
         return None
-    choice = questionary.select("Select TV Show: ", choices=choices, style=questionary_style).ask()
+    choice = questionary.select("Select TV Show:\n", choices=choices, style=questionary_style).ask()
     return response.json()["data"][choice]["id"].removeprefix("series-")
 
 

@@ -84,7 +84,7 @@ def rename_keys_to_lower(iterable):
     return iterable
 
 
-def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang: str, sublang: str, subdir: str = "", codec: str = "h265", bit: int = 10, output: str = "", copy: bool = False):
+def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang: str, sublang: str, subdir: str = "", codec: str = "h265", bit: int = 10, output: str = "", copy: bool = False, searchstring: str | None = None):
     if apitokens is None:
         apitokens = APITokens(thetvdb=None, opensub={"api_key": None, "token": None})
     series = os.path.basename(folder)
@@ -377,7 +377,7 @@ def recode(
     if len(changeslang) > 0:
         for change in changeslang:
             ffmpeg_dispositions.extend([f"-metadata:s:s:{change['index']}", f"language={change['lang']}"])
-            printlines.append(f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}s:{change['index']}{Style.RESET_ALL} language to {Color.MAGENTA}{change['lang']}{Style.RESET_ALL}")
+            printlines.append(f"Setting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}s:{change['index']}{Style.RESET_ALL} language to {Color.MAGENTA}{change['lang']}{Style.RESET_ALL}")
             changedefault = True
 
     for disposition in dispositions.values():
