@@ -682,13 +682,13 @@ def main():
         folder = os.getcwd()
         series = os.path.basename(folder)
         parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
-        currseriesobj, destseriesobj, seriesname, year, currSeasonType = change_season_type(series, apitokens["thetvdb"], lang=infolang)
+        currseriesobj, destseriesobj, seriesname, year = change_season_type(series, apitokens["thetvdb"], lang=infolang)
         if year != "":
             series = f"{seriesname} ({year})"
         for dire in sorted(os.listdir(folder)):
             if os.path.isdir(dire):
                 for subdir in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
-                    season, name = change_episode_number(series, subdir, currseriesobj, destseriesobj, currSeasonType)
+                    season, name = change_episode_number(series, subdir, currseriesobj, destseriesobj)
                     if name is not None:
                         if not os.path.exists(os.path.join(parentfolder, series, season)):
                             os.makedirs(os.path.join(parentfolder, series, season))
@@ -698,7 +698,7 @@ def main():
                             print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                             shutil.move(old, new)
             else:
-                season, name = change_episode_number(series, subdir, currseriesobj, destseriesobj, currSeasonType)
+                season, name = change_episode_number(series, subdir, currseriesobj, destseriesobj)
                 if name is not None and season is not None:
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
                         os.makedirs(os.path.join(parentfolder, series, season))

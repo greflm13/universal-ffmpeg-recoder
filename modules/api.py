@@ -303,7 +303,7 @@ def get_series_from_tvdb(series: str, token: str, lang: str, searchstring: str |
     return None, "", ""
 
 
-def change_season_type(series: str, token: str, lang: str, searchstring: str | None = None) -> tuple[list[dict[str, str | dict[str, str]]] | None, list[dict[str, str | dict[str, str]]] | None, str, str, str]:
+def change_season_type(series: str, token: str, lang: str, searchstring: str | None = None) -> tuple[list[dict[str, str | dict[str, str]]] | None, list[dict[str, str | dict[str, str]]] | None, str, str]:
     if token is None:
         return None, "", ""
     seriesid = find_series_id(series, token, lang, searchstring)
@@ -313,16 +313,14 @@ def change_season_type(series: str, token: str, lang: str, searchstring: str | N
     destSeasonType = get_season_type(seriesid, token, " Desired")
     currlist, name, year = get_episodelist(seriesid, currSeasonType, lang, token)
     destlist, name, year = get_episodelist(seriesid, destSeasonType, lang, token)
-    return currlist, destlist, name, year, currSeasonType
+    return currlist, destlist, name, year
 
 
-def change_episode_number(series: str, file: str, seriesobj: list, destobj: list, currSeasonType: str) -> tuple[str | None, str | None]:
+def change_episode_number(series: str, file: str, seriesobj: list, destobj: list) -> tuple[str | None, str | None]:
     if os.path.splitext(file)[1] in VIDEO_CONTAINERS:
         match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})+)", file)
         if match:
             seasonnum = match.groups()[0]
-            if currSeasonType == "absolute":
-                seasonnum = "01"
             episodes = match.groups()[1].replace("e", "E").split("E")
             episodes.remove("")
         else:
