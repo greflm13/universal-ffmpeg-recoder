@@ -175,7 +175,7 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                     ret = response.json()["data"]  # type: ignore
                     if len(ret) > 1 and stype == "single":
                         choices = build_choice_list(ret, lang)
-                        choice = questionary.select("Select Movie:\n", choices=choices, style=questionary_style).ask()
+                        choice = questionary.select("Select Movie:\n  ", choices=choices, style=questionary_style).ask()
                     else:
                         choice = 0
                     ret = ret[choice]
@@ -220,32 +220,39 @@ def split_string_at_whitespace(text: str, n: int) -> list[str]:
 
 @cache
 def find_series_id(series: str, token: str, lang: str, searchstring: str | None = None) -> str | None:
+    res = []
     headers = {"Authorization": f"Bearer {token}"}
-    if searchstring is not None:
-        match = re.search(r"\((\d{4})\)", searchstring)
-    else:
-        match = re.search(r"\((\d{4})\)", series)
-    try:
-        seriesyear = match.groups()[0]  # type: ignore
-        queryseries = urllib.parse.quote(series[: match.start()].strip())
-    except AttributeError:
-        seriesyear = ""
-        queryseries = urllib.parse.quote(re.search(r"[A-Za-z._-]+", series)[0].replace(".", " ").replace("-", " ").replace("_", " ").upper().removesuffix("S").strip())  # type: ignore
-    response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}&language={lang}", timeout=10, headers=headers)
-    if response.status_code != 200:
-        response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers=headers)
-    res = response.json()["data"]
-    if res == []:
-        response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&language={lang}", timeout=10, headers=headers)
+    while res == []:
+        if searchstring is not None:
+            match = re.search(r"\((\d{4})\)", searchstring)
+        else:
+            match = re.search(r"\((\d{4})\)", series)
+        try:
+            seriesyear = match.groups()[0]  # type: ignore
+            queryseries = urllib.parse.quote(series[: match.start()].strip())
+        except AttributeError:
+            seriesyear = ""
+            if searchstring is not None:
+                queryseries = urllib.parse.quote(searchstring)
+            else:
+                queryseries = urllib.parse.quote(re.search(r"[A-Za-z._-]+", series)[0].replace(".", " ").replace("-", " ").replace("_", " ").upper().removesuffix("S").strip())  # type: ignore
+        response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}&language={lang}", timeout=10, headers=headers)
         if response.status_code != 200:
-            response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series", timeout=10, headers=headers)
+            response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers=headers)
         res = response.json()["data"]
-    # choices = [f"{serie['slug'].ljust(30)[:30]} {serie.get('year')}: {serie.get('overviews', {}).get(lang, serie.get('overview', ''))[:180]}" for serie in res]
+        if res == []:
+            response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&language={lang}", timeout=10, headers=headers)
+            if response.status_code != 200:
+                response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series", timeout=10, headers=headers)
+            res = response.json()["data"]
+        # choices = [f"{serie['slug'].ljust(30)[:30]} {serie.get('year')}: {serie.get('overviews', {}).get(lang, serie.get('overview', ''))[:180]}" for serie in res]
+        if res == []:
+            searchstring = input("Not found! Enter search string: ")
     choices = build_choice_list(res, lang)
     if choices == []:
         print(f"{Color.RED}err: {Style.RESET_ALL}Series not found! {Color.BLUE}{series}{Style.RESET_ALL}")
         return None
-    choice = questionary.select("Select TV Show:\n", choices=choices, style=questionary_style).ask()
+    choice = questionary.select("Select TV Show:\n  ", choices=choices, style=questionary_style).ask()
     return response.json()["data"][choice]["id"].removeprefix("series-")
 
 
