@@ -3,13 +3,10 @@
 import os
 import re
 import sys
-import json
 import shutil
-import datetime
 import tempfile
 import argparse
 
-from subprocess import Popen, PIPE, STDOUT
 from typing import Optional
 
 from colorama import init as colorama_init
@@ -17,11 +14,12 @@ from colorama import Fore as Color
 from colorama import Style
 from rich_argparse import RichHelpFormatter
 
-from modules.ffprobe import Ffprobe, StreamTags, Stream
+from modules.ffprobe import StreamTags, Stream
 from modules.api import api_login, change_episode_number, change_season_type, get_episode, get_movie_name, get_series_from_tvdb, get_subtitles_from_ost, logout, APITokens
 from modules.video import video
 from modules.audio import audio, recode_audio
 from modules.subs import subtitles
+from modules.ffmpeg import probe, ffrecode
 
 colorama_init()
 
@@ -70,18 +68,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=["eng", "ger"], dest="sublang")
     parser.add_argument("--searchstring", help="Manual search string for TVDB API", required=False, default=None, dest="searchstring", metavar="SEARCHSTRING")
     return parser.parse_args()
-
-
-def rename_keys_to_lower(iterable):
-    if isinstance(iterable, dict):
-        for key in list(iterable.keys()):
-            iterable[key.lower()] = iterable.pop(key)
-            if isinstance(iterable[key.lower()], dict) or isinstance(iterable[key.lower()], list):
-                iterable[key.lower()] = rename_keys_to_lower(iterable[key.lower()])
-    elif isinstance(iterable, list):
-        for item in iterable:
-            item = rename_keys_to_lower(item)
-    return iterable
 
 
 def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang: str, sublang: str, subdir: str = "", codec: str = "h265", bit: int = 10, output: str = "", copy: bool = False, searchstring: str | None = None):
@@ -171,11 +157,11 @@ def recode(
     astreams = []
     sstreams = []
 
-    ffmpeg_command = []
     ffmpeg_mapping = []
     ffmpeg_recoding = []
     ffmpeg_dispositions = []
     ffmpeg_metadata = []
+    additional_files = []
 
     vindex = 0
     aindex = 0
@@ -188,8 +174,6 @@ def recode(
     changemetadata = False
 
     subfile = ""
-
-    ffmpeg_command.extend(["ffmpeg", "-v", "error", "-stats", "-hwaccel", "auto", "-strict", "-2", "-i", os.path.realpath(file)])
 
     if apitokens is None:
         apitokens = APITokens(thetvdb=None, opensub={"api_key": None, "token": None})
@@ -211,19 +195,8 @@ def recode(
 
     prelines.append(f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
 
-    p = Popen(
-        ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", os.path.realpath(file), "-strict", "-2"],
-        stdout=PIPE,
-        stderr=PIPE,
-    )
-    out, err = p.communicate()
-    ffprobe_output = json.loads(out.decode("utf-8"))
-    ffprobedict = rename_keys_to_lower(ffprobe_output)
-    try:
-        ffprobe = Ffprobe.from_dict(ffprobedict)
-    except Exception as e:
-        print(f"Error: {err.decode('utf-8')} {e}")
-        return
+    ffprobe = probe(os.path.realpath(file))
+
     if ffprobe.streams is None:
         print(f"Error: {file} has no streams")
         return
@@ -289,20 +262,9 @@ def recode(
             subfile = [get_subtitles_from_ost(token=apitokens["opensub"], metadata=metadata, lang=sublang, file=file)]
         try:
             for fil in subfile:
-                p = Popen(
-                    ["ffprobe", "-v", "error", "-show_streams", "-show_format", "-output_format", "json", os.path.realpath(fil), "-strict", "-2"],
-                    stdout=PIPE,
-                    stderr=PIPE,
-                )
-                out, err = p.communicate()
-                ffprobe_output = json.loads(out.decode("utf-8"))
-                ffprobedict = rename_keys_to_lower(ffprobe_output)
-                try:
-                    sub = Ffprobe.from_dict(ffprobedict)
-                except Exception:
-                    ...
+                sub = probe(os.path.realpath(fil))
                 prelines.append(f"{Color.RED}Adding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(fil)}{Style.RESET_ALL}")
-                ffmpeg_command.extend(["-i", os.path.realpath(fil)])
+                additional_files.append(os.path.realpath(fil))
                 for stream in sub.streams:
                     if stream.tags is None:
                         stream.tags = StreamTags.from_dict({"title": None, "language": sublang})
@@ -443,59 +405,42 @@ def recode(
 
     _, tmpfile = tempfile.mkstemp(suffix=".mkv")
 
-    ffmpeg_command.extend(ffmpeg_mapping)
-    ffmpeg_command.extend(ffmpeg_recoding)
     if vrecoding:
         if HWACC == "AMF":
-            ffmpeg_command.extend(["-rc", "hqvbr", "-qvbr_quality_level", "23", "-quality", "quality"])
+            ffmpeg_recoding.extend(["-rc", "hqvbr", "-qvbr_quality_level", "23", "-quality", "quality"])
             if bit == 10 and pix_fmt == "yuv420p10le":
-                ffmpeg_command.extend(["-pixel_format", "p010le"])
+                ffmpeg_recoding.extend(["-pixel_format", "p010le"])
             else:
-                ffmpeg_command.extend(["-pixel_format", "yuv420p"])
+                ffmpeg_recoding.extend(["-pixel_format", "yuv420p"])
         elif HWACC == "CUDA":
             if codec != "av1":
-                ffmpeg_command.extend(["-preset", "p7", "-rc", "vbr_hq", "-cq", "23"])
+                ffmpeg_recoding.extend(["-preset", "p7", "-rc", "vbr_hq", "-cq", "23"])
             else:
-                ffmpeg_command.extend(["-preset", "p7", "-rc", "vbr", "-cq", "23"])
+                ffmpeg_recoding.extend(["-preset", "p7", "-rc", "vbr", "-cq", "23"])
             if bit == 10 and pix_fmt == "yuv420p10le":
-                ffmpeg_command.extend(["-pixel_format", "p010le"])
+                ffmpeg_recoding.extend(["-pixel_format", "p010le"])
             else:
-                ffmpeg_command.extend(["-pixel_format", "yuv420p"])
+                ffmpeg_recoding.extend(["-pixel_format", "yuv420p"])
         else:
             if codec != "av1":
-                ffmpeg_command.extend(["-crf", "23", "-preset", "veryslow"])
+                ffmpeg_recoding.extend(["-crf", "23", "-preset", "veryslow"])
             else:
-                ffmpeg_command.extend(["-crf", "23"])
+                ffmpeg_recoding.extend(["-crf", "23"])
             if bit == 10 and pix_fmt == "yuv420p10le":
-                ffmpeg_command.extend(["-pixel_format", "yuv420p10le"])
+                ffmpeg_recoding.extend(["-pixel_format", "yuv420p10le"])
             else:
-                ffmpeg_command.extend(["-pixel_format", "yuv420p"])
+                ffmpeg_recoding.extend(["-pixel_format", "yuv420p"])
     if arecoding:
-        ffmpeg_command.extend(["-b:a", "192k", "-ar", "48000"])
-    ffmpeg_command.extend(ffmpeg_dispositions)
-    ffmpeg_command.extend(ffmpeg_metadata)
-    ffmpeg_command.extend(["-f", "matroska", "-y", tmpfile])
+        ffmpeg_recoding.extend(["-b:a", "192k", "-ar", "48000"])
     for line in prelines:
         print(line)
     for line in midlines:
         print(line)
     for line in printlines:
         print(line)
-    # print(" ".join(ffmpeg_command))
 
-    timestart = datetime.datetime.now()
-    print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
-
-    # Run ffmpeg_command and print live output
     try:
-        with Popen(ffmpeg_command, stdout=PIPE, stderr=STDOUT) as process:
-            for c in iter(lambda: process.stdout.read(1), b""):
-                sys.stdout.buffer.write(c)
-                sys.stdout.flush()
-            process.wait()
-        timestop = datetime.datetime.now()
-        print(f"Recoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
-        print(f"Recoding took {Color.GREEN}{timestop - timestart}{Style.RESET_ALL}")
+        ffrecode(os.path.realpath(file), tmpfile, ffmpeg_mapping, ffmpeg_recoding, ffmpeg_dispositions, ffmpeg_metadata, additional_files)
 
         if output == "":
             # Rename old file
@@ -664,7 +609,7 @@ def main():
                         if not os.path.exists(os.path.join(parentfolder, series, season)):
                             os.makedirs(os.path.join(parentfolder, series, season))
                         old = os.path.join(folder, dire, subdir)
-                        new = os.path.splitext(os.path.join(parentfolder, series, season, name))[0] + os.path.splitext(subdir)[1]
+                        new = os.path.splitext(os.path.join(parentfolder, series, season, name))[0] + os.path.splitext(subdir)[1].replace("?", "")
                         if old != new:
                             print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                             shutil.move(old, new)
@@ -674,7 +619,7 @@ def main():
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
                         os.makedirs(os.path.join(parentfolder, series, season))
                     old = os.path.join(folder, dire)
-                    new = os.path.splitext(os.path.join(parentfolder, series, season, name))[0] + os.path.splitext(dire)[1]
+                    new = os.path.splitext(os.path.join(parentfolder, series, season, name))[0] + os.path.splitext(dire)[1].replace("?", "")
                     if old != new:
                         print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                         shutil.move(old, new)
