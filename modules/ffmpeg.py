@@ -121,7 +121,7 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
     @ffmpeg.on("completed")
     def on_completed():
         timestop = datetime.datetime.now()
-        print(f"Recoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
+        print(f"\nRecoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
         print(f"Recoding took {Color.GREEN}{timestop - timestart}{Style.RESET_ALL}")
 
     @ffmpeg.on("terminated")
