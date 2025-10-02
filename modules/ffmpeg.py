@@ -116,7 +116,7 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
     def on_progress(progress: Progress):
         termwidth = os.get_terminal_size().columns
         print("\r" + " " * termwidth, end="\r")
-        print(f"frame={progress.frame} fps={progress.fps} size={human_readable_size(progress.size)} time={format_timedelta(progress.time)} bitrate={progress.bitrate} speed={progress.speed}", end="\r")
+        print(f"frame={progress.frame} fps={int(progress.fps)} size={human_readable_size(progress.size)} time={format_timedelta(progress.time)} bitrate={human_readable_size(progress.bitrate)}/s speed={progress.speed}x", end="\r")
 
     @ffmpeg.on("completed")
     def on_completed():
