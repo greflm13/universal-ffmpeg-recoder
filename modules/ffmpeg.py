@@ -3,7 +3,7 @@ import datetime
 import os
 
 from colorama import Fore as Color, Style
-from ffmpeg import FFmpeg, Progress
+from ffmpeg import FFmpeg, Progress, errors
 
 from modules.ffprobe import Ffprobe
 
@@ -129,4 +129,8 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
         print("terminated")
 
     timestart = datetime.datetime.now()
-    ffmpeg.execute()
+
+    try:
+        ffmpeg.execute()
+    except errors.FFmpegError as e:
+        print(f"\n{Color.RED}FFmpeg error:{Style.RESET_ALL} {e}")
