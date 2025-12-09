@@ -21,16 +21,13 @@ def subtitles(
 ):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
-    if stream.tags.language in ["und", None, "ger"]:
+    if stream.tags.language in ["eng", "ger", "deu", "und", None, lang]:
         if stream.tags.language == "ger":
             changeslang.append({"index": sindex, "lang": "deu"})
             stream.tags.language = "deu"
-        else:
+        elif stream.tags.language in ["und", None]:
             changeslang.append({"index": sindex, "lang": lang})
             stream.tags.language = lang
-        stream.tags.language = lang
-    if stream.tags.language in ["eng", "ger", "deu", "und", None]:
-        stream.tags.language = "deu" if stream.tags.language == "ger" else stream.tags.language
         if stream.codec_name in ["subrip", "hdmv_pgs_subtitle", "ass", "dvd_subtitle"]:
             ffmpeg_mapping.extend(["-map", f"{file}:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:s:{sindex}", "copy"])
