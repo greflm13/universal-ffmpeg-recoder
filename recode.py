@@ -440,7 +440,10 @@ def recode(
         print(line)
 
     try:
-        ffrecode(os.path.realpath(file), tmpfile, ffmpeg_mapping, ffmpeg_recoding, ffmpeg_dispositions, ffmpeg_metadata, additional_files)
+        completed = ffrecode(os.path.realpath(file), tmpfile, ffmpeg_mapping, ffmpeg_recoding, ffmpeg_dispositions, ffmpeg_metadata, additional_files)
+        if not completed:
+            print(f"{Color.RED}Recoding failed, skipping moving file.{Style.RESET_ALL}")
+            return
 
         if output == "":
             # Rename old file

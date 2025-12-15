@@ -84,7 +84,7 @@ def probe(file_path: str) -> Ffprobe:
     return Ffprobe.from_dict(rename_keys_to_lower(json.loads(ffprobe.execute())))
 
 
-def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_recoding: list, ffmpeg_dispositions: list, ffmpeg_metadata: list, additional_files: list | None = None) -> None:
+def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_recoding: list, ffmpeg_dispositions: list, ffmpeg_metadata: list, additional_files: list | None = None) -> bool:
     """
     Re-encodes a media file using ffmpeg with the specified arguments.
 
@@ -97,8 +97,9 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
         ffmpeg_metadata (list): A list of ffmpeg metadata arguments.
 
     Returns:
-        None
+        completed (bool): True if the recoding was completed successfully, False otherwise.
     """
+    completed = False
     ffmpeg_args = list_to_dict(ffmpeg_recoding + ffmpeg_dispositions)
     mapping = maplist(ffmpeg_mapping)
     metadata = maplist(ffmpeg_metadata)
@@ -123,6 +124,7 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
         timestop = datetime.datetime.now()
         print(f"\nRecoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
         print(f"Recoding took {Color.GREEN}{timestop - timestart}{Style.RESET_ALL}")
+        completed = True
 
     @ffmpeg.on("terminated")
     def on_terminated():
@@ -134,3 +136,4 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
         ffmpeg.execute()
     except errors.FFmpegError as e:
         print(f"\n{Color.RED}FFmpeg error:{Style.RESET_ALL} {e}")
+    return completed
