@@ -99,6 +99,7 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
     Returns:
         completed (bool): True if the recoding was completed successfully, False otherwise.
     """
+    global completed
     completed = False
     ffmpeg_args = list_to_dict(ffmpeg_recoding + ffmpeg_dispositions)
     mapping = maplist(ffmpeg_mapping)
@@ -121,6 +122,7 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
 
     @ffmpeg.on("completed")
     def on_completed():
+        global completed
         timestop = datetime.datetime.now()
         print(f"\nRecoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
         print(f"Recoding took {Color.GREEN}{timestop - timestart}{Style.RESET_ALL}")
