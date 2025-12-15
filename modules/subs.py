@@ -22,12 +22,6 @@ def subtitles(
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
     if stream.tags.language in ["eng", "ger", "deu", "und", None, lang]:
-        if stream.tags.language == "ger":
-            changeslang.append({"index": sindex, "lang": "deu"})
-            stream.tags.language = "deu"
-        elif stream.tags.language in ["und", None]:
-            changeslang.append({"index": sindex, "lang": lang})
-            stream.tags.language = lang
         if stream.codec_name in ["subrip", "hdmv_pgs_subtitle", "ass", "dvd_subtitle"]:
             ffmpeg_mapping.extend(["-map", f"{file}:{stream.index}"])
             ffmpeg_recoding.extend([f"-c:s:{sindex}", "copy"])
@@ -41,6 +35,12 @@ def subtitles(
                 f"Converting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}{file}:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}srt{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}s:{sindex}{Style.RESET_ALL} in output file"
             )
             stream.codec_name = "srt"
+        if stream.tags.language == "ger":
+            changeslang.append({"index": sindex, "lang": "deu"})
+            stream.tags.language = "deu"
+        elif stream.tags.language in ["und", None]:
+            changeslang.append({"index": sindex, "lang": lang})
+            stream.tags.language = lang
         obj = stream.to_dict()
         obj["newindex"] = sindex
         sstreams.append(obj)
