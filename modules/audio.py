@@ -64,13 +64,6 @@ def audio(
 ):
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
-    if stream.tags.language in ["und", None, "ger"]:
-        if stream.tags.language == "ger":
-            changealang.append({"index": aindex, "lang": "deu"})
-            stream.tags.language = "deu"
-        else:
-            changealang.append({"index": aindex, "lang": lang})
-            stream.tags.language = lang
     if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None, lang]:
         arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang)
         dispositiontypes = [dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]]
@@ -81,5 +74,11 @@ def audio(
             "lang": stream.tags.language,
             "types": dispositiontypes,
         }
+        if stream.tags.language == "ger":
+            changealang.append({"index": aindex, "lang": "deu"})
+            stream.tags.language = "deu"
+        elif stream.tags.language in ["und", None]:
+            changealang.append({"index": aindex, "lang": lang})
+            stream.tags.language = lang
         aindex += 1
     return arecoding, aindex, changealang
