@@ -73,6 +73,8 @@ def api_login(config: str) -> APITokens:
         opensubtitlestoken = None
     except KeyError:
         opensubtitlestoken = None
+    except requests.exceptions.SSLError:
+        opensubtitlestoken = None
 
     tokens = APITokens({"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": conf.get("opensubtitles", "apikey")}})
     return tokens
