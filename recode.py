@@ -20,6 +20,7 @@ from modules.video import video
 from modules.audio import audio, recode_audio
 from modules.subs import subtitles
 from modules.ffmpeg import probe, ffrecode
+from modules.logger import logger
 
 colorama_init()
 
@@ -71,22 +72,30 @@ def parse_args() -> argparse.Namespace:
 
 
 def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang: str, sublang: str, subdir: str = "", codec: str = "h265", bit: int = 10, output: str = "", copy: bool = False, searchstring: str | None = None):
+    logger.info("Starting series recode process", extra={"folder": folder})
     if apitokens is None:
+        logger.info("No API tokens provided")
         apitokens = APITokens(thetvdb=None, opensub={"api_key": None, "token": None})
     series = os.path.basename(folder)
     parentfolder = output if output != "" else os.path.realpath(folder).removesuffix(f"/{series}")
+    logger.info("Series info", extra={"series": series, "parent_folder": parentfolder})
     seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=infolang, searchstring=searchstring)
     if seriesobj is None:
+        logger.error("Failed to retrieve series info", extra={"series": series})
         return
     if year != "":
         series = f"{seriesname} ({year})"
+    logger.info("Processing series", extra={"series": series})
     for dire in sorted(os.listdir(folder)):
         if os.path.isdir(os.path.join(folder, dire)):
             for file in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
+                logger.info("Processing file", extra={"file": file})
                 season, name, metadata = get_episode(series, file, seriesobj)
                 if name is not None and season is not None:
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
+                        logger.info("Creating directory", extra={"path": os.path.join(parentfolder, series, season)})
                         os.makedirs(os.path.join(parentfolder, series, season))
+                    logger.info("Recoding episode", extra={"episode": name})
                     recode(
                         file=os.path.join(folder, dire, file),
                         path=os.path.join(parentfolder, series, season, name),
@@ -138,6 +147,7 @@ def recode(
     copy: bool = False,
     searchstring: str | None = None,
 ):
+    logger.info("Recode parameters", extra={"codec": codec, "bit": bit, "type": stype, "copy": copy})
     prelines = []
     midlines = []
     printlines = []
@@ -176,11 +186,14 @@ def recode(
     subfile = ""
 
     if apitokens is None:
+        logger.debug("No API tokens provided, using None tokens")
         apitokens = APITokens(thetvdb=None, opensub={"api_key": None, "token": None})
 
     if path is None:
+        logger.info("Getting movie name", extra={"file": file})
         output_file, metadata = get_movie_name(file, apitokens["thetvdb"], lang=infolang, stype=stype, searchstring=searchstring)
         if output_file is None:
+            logger.warning("Could not determine output filename", extra={"file": file})
             return
         output_dir = output if output != "" else os.path.realpath(file).removesuffix(file)
         output_file = os.path.join(output_dir, output_file)
@@ -188,18 +201,23 @@ def recode(
         output_file = path
 
     if metadata is None:
+        logger.info("Creating default metadata")
         metadata = {}
         metadata["title"] = os.path.basename(os.path.splitext(output_file)[0])
 
     output_file = output_file.replace("?", "")
+    logger.info("Recoding file", extra={"input": os.path.realpath(file), "output": os.path.realpath(output_file)})
 
     prelines.append(f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
 
     ffprobe = probe(os.path.realpath(file))
 
     if ffprobe.streams is None:
+        logger.error("File has no streams", extra={"file": file})
         print(f"Error: {file} has no streams")
         return
+
+    logger.info("Probing file", extra={"num_streams": len(ffprobe.streams)})
 
     midlines.append(f"{Color.RED}Streams{Style.RESET_ALL}:")
     for stream in ffprobe.streams:
@@ -231,9 +249,11 @@ def recode(
     printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------{Style.RESET_ALL}")
 
     for stream in videostreams:
+        logger.info("Processing video stream", extra={"index": stream.index, "codec": stream.codec_name})
         vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, dispositions, HWACC, codec, bit, copy)
 
     for stream in audiostreams:
+        logger.info("Processing audio stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language})
         arecoding, aindex, changealang = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, dispositions, changealang, lang)
 
     if aindex == 0:
@@ -283,17 +303,18 @@ def recode(
         )
         tindex += 1
 
-    for stream in ffprobe.streams:
-        if stream.codec_type == "video" and stream.codec_name == "mjpeg" and stream.tags.filename == "cover.jpg":
-            disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
-            midlines.append(f"{Color.BLUE}0:{stream.index} {Color.GREEN}attached picture {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.YELLOW}{disposition}{Style.RESET_ALL}")
-            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", "mjpeg", f"-filter:v:{vindex}", "scale=-1:600"])
-            ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
-            printlines.append(
-                f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
-            )
-            vindex += 1
+    # for stream in ffprobe.streams:
+    #     if stream.codec_type == "video" and stream.codec_name == "mjpeg" and stream.tags.filename == "cover.jpg":
+    #         disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
+    #         midlines.append(f"{Color.BLUE}0:{stream.index} {Color.GREEN}attached picture {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.YELLOW}{disposition}{Style.RESET_ALL}")
+    #         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+    #         # ffmpeg_recoding.extend([f"-c:v:{vindex}", "mjpeg", f"-filter:v:{vindex}", "scale=-1:600"])
+    #         ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
+    #         ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
+    #         printlines.append(
+    #             f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
+    #         )
+    #         vindex += 1
 
     printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------{Style.RESET_ALL}")
 
@@ -385,6 +406,7 @@ def recode(
         if metadata[tag] != "" and metadata[tag] is not None:
             if tag in format_tags and metadata[tag].strip() == format_tags[tag]:
                 continue
+            logger.info("Updating metadata tag", extra={"tag": tag})
             if tag not in format_tags:
                 printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
             else:
@@ -393,9 +415,11 @@ def recode(
             changemetadata = True
 
     if not vrecoding and not arecoding and not changedefault and not changemetadata and os.path.realpath(file) == os.path.realpath(output_file):
+        logger.info("No changes needed", extra={"file": file})
         print(f"{Color.RED}No changes to make: {Color.GREEN}{file} {Color.BLUE}Continuing...{Style.RESET_ALL}")
         return
     if os.path.realpath(file) != os.path.realpath(output_file) and not vrecoding and not arecoding and not changedefault and not changemetadata:
+        logger.info("Moving file", extra={"from": file, "to": os.path.realpath(output_file)})
         print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}{file}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
         shutil.move(os.path.realpath(file), os.path.realpath(output_file))
         return
@@ -404,15 +428,19 @@ def recode(
         printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------{Style.RESET_ALL}")
 
     _, tmpfile = tempfile.mkstemp(suffix=".mkv")
+    logger.info("Created temporary file", extra={"tmpfile": tmpfile})
 
     if vrecoding:
+        logger.info("Setting up video recoding parameters")
         if HWACC == "AMF":
+            logger.info("Using AMF video encoding")
             ffmpeg_recoding.extend(["-rc", "hqvbr", "-qvbr_quality_level", "23", "-quality", "quality"])
             if bit == 10 and pix_fmt == "yuv420p10le":
                 ffmpeg_recoding.extend(["-pixel_format", "p010le"])
             else:
                 ffmpeg_recoding.extend(["-pixel_format", "yuv420p"])
         elif HWACC == "CUDA":
+            logger.info("Using CUDA video encoding")
             if codec != "av1":
                 ffmpeg_recoding.extend(["-preset", "p7", "-rc", "vbr_hq", "-cq", "23"])
             else:
@@ -467,6 +495,7 @@ def recode(
 
 
 def main():
+    logger.info("Starting universal-ffmpeg-recoder")
     if "APPDATA" in os.environ:
         confighome = os.environ["APPDATA"]
     elif "XDG_CONFIG_HOME" in os.environ:
@@ -474,18 +503,23 @@ def main():
     else:
         confighome = os.path.join(os.environ["HOME"], ".config")
     configpath = os.path.join(confighome, "universal-ffmpeg-recoder")
+    logger.info("Config path", extra={"path": configpath})
     if not os.path.exists:
         os.makedirs(configpath)
 
     args = parse_args()
+    logger.info("Arguments received", extra={"type": args.contentype, "codec": args.codec, "bit": args.bit})
 
     if args.hwaccel is False:
         global HWACC
+        logger.info("Hardware acceleration disabled")
         HWACC = None
 
     if not args.apis:
+        logger.info("Logging in to APIs")
         apitokens = api_login(configpath)
     else:
+        logger.info("APIs disabled")
         apitokens = None
 
     if not args.infolang:
@@ -501,8 +535,10 @@ def main():
         sublang = args.sublang
 
     if args.contentype == "film":
+        logger.info("Processing film content")
         if args.inputfile:
             if os.path.isfile(args.inputfile):
+                logger.info("Recoding single film file", extra={"file": args.inputfile})
                 recode(
                     file=args.inputfile,
                     apitokens=apitokens,
@@ -519,9 +555,11 @@ def main():
                 )
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
+                logger.error("File not found", extra={"file": args.inputfile})
                 raise FileNotFoundError(error)
         elif args.inputdir:
             if os.path.isdir(args.inputdir):
+                logger.info("Recoding multiple film files", extra={"directory": args.inputdir})
                 for subdir in os.listdir(args.inputdir):
                     recode(
                         file=subdir,
@@ -539,13 +577,18 @@ def main():
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
+                logger.error("Input directory not found", extra={"directory": args.inputdir})
                 raise FileNotFoundError(error)
         else:
+            error = "inputfile or directory required if type is film"
+            logger.error(error)
             print("error: inputfile or directory required if type is film")
             sys.exit()
     elif args.contentype == "seriesdir":
+        logger.info("Processing series directory")
         if args.inputdir:
             if os.path.isdir(args.inputdir):
+                logger.info("Recoding series from directory", extra={"directory": args.inputdir})
                 for subdir in sorted(os.listdir(args.inputdir)):
                     recode_series(
                         os.path.join(os.path.realpath(args.inputdir), subdir),
@@ -562,13 +605,18 @@ def main():
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
+                logger.error("Input directory not found", extra={"directory": args.inputdir})
                 raise FileNotFoundError(error)
         else:
+            error = "inputdirectory required if type is seriesdir"
+            logger.error(error)
             print("error: inputdirectory required if type is seriesdir")
             sys.exit()
     elif args.contentype == "series":
+        logger.info("Processing series content")
         if args.inputdir:
             if os.path.isdir(args.inputdir):
+                logger.info("Recoding series from directory", extra={"directory": args.inputdir})
                 recode_series(
                     args.inputdir,
                     apitokens=apitokens,
@@ -584,8 +632,10 @@ def main():
                 )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
+                logger.error("Input directory not found", extra={"directory": args.inputdir})
                 raise FileNotFoundError(error)
         else:
+            logger.info("Recoding series from current directory")
             recode_series(
                 os.getcwd(),
                 apitokens=apitokens,
@@ -600,8 +650,10 @@ def main():
                 searchstring=args.searchstring,
             )
     elif args.contentype == "rename":
+        logger.info("Processing rename operation")
         folder = os.getcwd()
         series = os.path.basename(folder)
+        logger.info("Rename info", extra={"folder": folder, "series": series})
         parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
         seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=infolang, searchstring=args.searchstring)
         if year != "":
@@ -629,8 +681,10 @@ def main():
                         print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                         shutil.move(old, new)
     elif args.contentype == "changeSeasonType":
+        logger.info("Processing season type change")
         folder = os.getcwd()
         series = os.path.basename(folder)
+        logger.info("Change season type info", extra={"folder": folder, "series": series})
         parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
         currseriesobj, destseriesobj, seriesname, year = change_season_type(series, apitokens["thetvdb"], lang=infolang)
         if year != "":
@@ -659,7 +713,10 @@ def main():
                         shutil.move(old, new)
 
     if not args.apis:
+        logger.info("Logging out of APIs")
         logout(apitokens["opensub"])
+
+    logger.info("Completed universal-ffmpeg-recoder")
 
 
 if __name__ == "__main__":

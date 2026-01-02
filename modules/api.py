@@ -14,6 +14,7 @@ from colorama import Fore as Color
 from colorama import Style
 
 from modules.FileOperations import File
+from modules.logger import logger
 
 # fmt: off
 VIDEO_CONTAINERS = [
@@ -38,16 +39,20 @@ questionary_style = questionary.Style([("highlighted", "fg:#00bcdc")])
 
 
 def api_login(config: str) -> APITokens:
+    logger.info("Starting API login")
     if not os.path.exists(config):
+        logger.info("Creating config file", extra={"path": config})
         os.mknod(config)
 
     conf = configparser.ConfigParser()
     conf.read(config)
 
     if "thetvdb" not in conf:
+        logger.info("Requesting theTVDB API key")
         conf["thetvdb"] = {}
         conf["thetvdb"]["apikey"] = input('theTVDB api not configured. Please open "https://thetvdb.com/api-information/signup" and paste the api key here: ')
     if "opensubtitles" not in conf:
+        logger.info("Requesting OpenSubtitles API credentials")
         conf["opensubtitles"] = {}
         conf["opensubtitles"]["apikey"] = input('OpenSubtitles api not configured. Please open "https://www.opensubtitles.com/consumers" and paste the api key here: ')
         conf["opensubtitles"]["user"] = input("username: ")
@@ -56,9 +61,11 @@ def api_login(config: str) -> APITokens:
     with open(config, "w") as configfile:
         conf.write(configfile)
 
+    logger.info("Authenticating with theTVDB")
     response = requests.post("https://api4.thetvdb.com/v4/login", json={"apikey": conf.get("thetvdb", "apikey")}, timeout=10, headers={"Content-Type": "application/json"})
     thetvdbtoken = response.json()["data"]["token"]
 
+    logger.info("Authenticating with OpenSubtitles")
     try:
         response = requests.post(
             "https://api.opensubtitles.com/api/v1/login",
@@ -68,19 +75,25 @@ def api_login(config: str) -> APITokens:
         )
         opensubtitlestoken = response.json()["token"]
     except requests.Timeout:
+        logger.warning("OpenSubtitles API timeout")
         opensubtitlestoken = None
     except requests.JSONDecodeError:
+        logger.warning("OpenSubtitles API JSON decode error")
         opensubtitlestoken = None
     except KeyError:
+        logger.warning("OpenSubtitles API token key not found")
         opensubtitlestoken = None
     except requests.exceptions.SSLError:
+        logger.warning("OpenSubtitles API SSL error")
         opensubtitlestoken = None
 
+    logger.info("API login completed")
     tokens = APITokens({"thetvdb": thetvdbtoken, "opensub": {"token": opensubtitlestoken, "api_key": conf.get("opensubtitles", "apikey")}})
     return tokens
 
 
 def logout(token):
+    logger.info("Logging out from OpenSubtitles API")
     requests.delete(
         "https://api.opensubtitles.com/api/v1/logout",
         headers={"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.0", "Authorization": f"Bearer {token['token']}"},
@@ -136,6 +149,7 @@ def build_choice_list(option_list: list[dict[str, str | dict[str, str]]], lang: 
 
 
 def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single", searchstring: str | None = None) -> tuple[str, dict[str, str] | dict[str, Any]]:
+    logger.info("Getting movie name", extra={"file": file, "language": lang, "type": stype})
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
             metadata = {"title": os.path.splitext(file)[0]}
@@ -154,6 +168,7 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                     return output_file, {"title": f"{movie_name}({year})"}
             found = False
             while not found:
+                logger.info("Searching for movie", extra={"name": movie_name, "year": year, "language": lang})
                 succ = False
                 while not succ:
                     try:
@@ -181,6 +196,7 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                     else:
                         choice = 0
                     ret = ret[choice]
+                    logger.info("Movie found", extra={"title": ret["extended_title"], "year": ret["year"]})
                     if "overviews" in ret and lang in ret["overviews"]:
                         comment = ret["overviews"][lang]
                     elif "overviews" in ret and "eng" in ret["overviews"]:
@@ -193,6 +209,7 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                     else:
                         metadata = {"comment": comment, "title": ret["extended_title"].replace("/", "-"), "date": date}
                         output_file = f"{ret['extended_title']}.mkv"
+                    logger.info("Movie metadata retrieved", extra={"metadata": metadata})
                     found = True
                 except IndexError:
                     movie_name = input("Not found! Enter search string: ")
@@ -222,6 +239,7 @@ def split_string_at_whitespace(text: str, n: int) -> list[str]:
 
 @cache
 def find_series_id(series: str, token: str, lang: str, searchstring: str | None = None) -> str | None:
+    logger.info("Finding series ID", extra={"series": series, "language": lang})
     res = []
     headers = {"Authorization": f"Bearer {token}"}
     while res == []:
@@ -238,6 +256,7 @@ def find_series_id(series: str, token: str, lang: str, searchstring: str | None 
                 queryseries = urllib.parse.quote(searchstring)
             else:
                 queryseries = urllib.parse.quote(re.search(r"[A-Za-z._-]+", series)[0].replace(".", " ").replace("-", " ").replace("_", " ").upper().removesuffix("S").strip())  # type: ignore
+        logger.info("Searching for series", extra={"query": queryseries, "year": seriesyear})
         response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}&language={lang}", timeout=10, headers=headers)
         if response.status_code != 200:
             response = requests.get(f"https://api4.thetvdb.com/v4/search?query={queryseries}&type=series&year={seriesyear}", timeout=10, headers=headers)
@@ -255,6 +274,7 @@ def find_series_id(series: str, token: str, lang: str, searchstring: str | None 
         print(f"{Color.RED}err: {Style.RESET_ALL}Series not found! {Color.BLUE}{series}{Style.RESET_ALL}")
         return None
     choice = questionary.select("Select TV Show:\n  ", choices=choices, style=questionary_style).ask()
+    logger.info("Series ID found", extra={"series_id": response.json()["data"][choice]["id"].removeprefix("series-")})
     return response.json()["data"][choice]["id"].removeprefix("series-")
 
 
@@ -276,6 +296,7 @@ def get_season_type(seriesid: str, token: str, specifier: str = "") -> str:
             else:
                 types.append(questionary.Choice(title=typ["name"], value=idx))
         choice = questionary.select(f"Select{specifier} Season Type: ", choices=types, style=questionary_style).ask()
+        logger.info("Season type selected", extra={"season_type": data[choice]["type"], "choices": data})
         return data[choice]["type"]
     else:
         return "default"

@@ -2,6 +2,7 @@ from colorama import Fore as Color
 from colorama import Style
 
 from modules.ffprobe import Stream, StreamTags
+from modules.logger import logger
 
 SUBTITLE_PRIORITY = {"forced": 4, "full": 3, "none": 1}
 
@@ -19,6 +20,7 @@ def subtitles(
     lang: str,
     file=0,
 ):
+    logger.info("Processing subtitle stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language if stream.tags else None})
     if stream.tags is None:
         stream.tags = StreamTags.from_dict({"title": None})
     if stream.tags.language in ["eng", "ger", "deu", "und", None, lang]:
@@ -58,6 +60,7 @@ def subtitles(
 
 
 def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[str, dict[str, str | list[str]]], lang: str):
+    logger.info("Updating subtitle default", extra={"stream_index": sindex, "language": stream.tags.language})
     subtitle_type = "none"
     if stream.tags.title:
         title_lower = stream.tags.title.lower()

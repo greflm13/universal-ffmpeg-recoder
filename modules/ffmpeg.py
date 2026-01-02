@@ -6,6 +6,7 @@ from colorama import Fore as Color, Style
 from ffmpeg import FFmpeg, Progress, errors
 
 from modules.ffprobe import Ffprobe
+from modules.logger import logger
 
 
 def list_to_dict(lst: list) -> dict:
@@ -80,6 +81,7 @@ def probe(file_path: str) -> Ffprobe:
     Returns:
         dict: A dictionary containing the metadata of the media file.
     """
+    logger.info("Probing media file", extra={"file": file_path})
     ffprobe = FFmpeg(executable="ffprobe").input(file_path, print_format="json", show_streams=None, show_format=None, strict="-2", v="error")
     return Ffprobe.from_dict(rename_keys_to_lower(json.loads(ffprobe.execute())))
 
@@ -99,6 +101,7 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
     Returns:
         completed (bool): True if the recoding was completed successfully, False otherwise.
     """
+    logger.info("Starting FFmpeg recoding", extra={"input": input_file, "output": output_file})
     global completed
     completed = False
     ffmpeg_args = list_to_dict(ffmpeg_recoding + ffmpeg_dispositions)
@@ -106,16 +109,20 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
     metadata = maplist(ffmpeg_metadata)
     ffmpeg = FFmpeg(executable="ffmpeg").option("y").option("hwaccel", "auto").option("strict", "-2").option("v", "error").option("stats").input(input_file)
     if additional_files:
+        logger.info("Adding additional files", extra={"count": len(additional_files)})
         for file in additional_files:
             ffmpeg = ffmpeg.input(file)
     ffmpeg = ffmpeg.output(output_file, ffmpeg_args, f="matroska", map=mapping, metadata=metadata)
+    logger.info("FFmpeg configured", extra={"output_format": "matroska"})
 
     @ffmpeg.on("start")
     def on_start(arguments: list[str]):
+        logger.info("FFmpeg recoding started")
         print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
 
     @ffmpeg.on("progress")
     def on_progress(progress: Progress):
+        logger.debug("FFmpeg progress", extra={"frame": progress.frame, "fps": int(progress.fps), "time": format_timedelta(progress.time), "speed": progress.speed})
         termwidth = os.get_terminal_size().columns
         print("\r" + " " * termwidth, end="\r")
         print(f"frame={progress.frame} fps={int(progress.fps)} size={human_readable_size(progress.size)} time={format_timedelta(progress.time)} bitrate={human_readable_size(progress.bitrate)}/s speed={progress.speed}x", end="\r")
@@ -124,12 +131,14 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
     def on_completed():
         global completed
         timestop = datetime.datetime.now()
+        logger.info("FFmpeg recoding completed", extra={"duration": str(timestop - timestart)})
         print(f"\nRecoding finished at {Color.GREEN}{timestop.isoformat()}{Style.RESET_ALL}")
         print(f"Recoding took {Color.GREEN}{timestop - timestart}{Style.RESET_ALL}")
         completed = True
 
     @ffmpeg.on("terminated")
     def on_terminated():
+        logger.error("FFmpeg process terminated")
         print("terminated")
 
     timestart = datetime.datetime.now()
@@ -137,5 +146,6 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
     try:
         ffmpeg.execute()
     except errors.FFmpegError as e:
+        logger.error("FFmpeg error", extra={"error": str(e)})
         print(f"\n{Color.RED}FFmpeg error:{Style.RESET_ALL} {e}")
     return completed
