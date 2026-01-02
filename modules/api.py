@@ -166,9 +166,15 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                 output_file = f"{movie_name}({year}).mkv"
                 if token is None:
                     return output_file, {"title": f"{movie_name}({year})"}
+            else:
+                if searchstring is not None:
+                    movie_name = searchstring
+                else:
+                    movie_name = input("No regex match! Enter search string: ")
+                    year = ""
             found = False
             while not found:
-                logger.info("Searching for movie", extra={"name": movie_name, "year": year, "language": lang})
+                logger.info("Searching for movie", extra={"search": movie_name, "year": year, "language": lang})
                 succ = False
                 while not succ:
                     try:
@@ -213,7 +219,15 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                     found = True
                 except IndexError:
                     movie_name = input("Not found! Enter search string: ")
-                    year = ""
+                    match = re.search(pattern=r"(.*)(\d{4}(?![pi]))", string=movie_name)
+                    if match:
+                        comment = None
+                        date = None
+                        year: str = match.groups()[1]
+                        movie_name: str = match.groups()[0].replace("_", " ").replace(".", " ").replace("(", "").replace(")", "")
+                        output_file = f"{movie_name}({year}).mkv"
+                    else:
+                        year = ""
             return output_file, metadata
     return None, None
 
