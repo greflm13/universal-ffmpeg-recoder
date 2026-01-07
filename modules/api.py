@@ -328,7 +328,7 @@ def get_episodelist(seriesid: str, seasonType: str, lang: str, token: str) -> tu
         name = translation["name"]
     else:
         name = data["name"]
-    year = data["year"]
+    year = data.get("year", "")
 
     while response.json()["links"]["next"] is not None:
         response = requests.get(response.json()["links"]["next"], timeout=10, headers=headers)
