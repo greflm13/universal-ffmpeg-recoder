@@ -85,6 +85,8 @@ def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang:
         return
     if year != "":
         series = f"{seriesname} ({year})"
+    else:
+        series = seriesname
     logger.info("Processing series", extra={"series": series})
     for dire in sorted(os.listdir(folder)):
         if os.path.isdir(os.path.join(folder, dire)):
