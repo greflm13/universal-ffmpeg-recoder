@@ -305,18 +305,18 @@ def recode(
         )
         tindex += 1
 
-    # for stream in ffprobe.streams:
-    #     if stream.codec_type == "video" and stream.codec_name == "mjpeg" and stream.tags.filename == "cover.jpg":
-    #         disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
-    #         midlines.append(f"{Color.BLUE}0:{stream.index} {Color.GREEN}attached picture {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.YELLOW}{disposition}{Style.RESET_ALL}")
-    #         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-    #         # ffmpeg_recoding.extend([f"-c:v:{vindex}", "mjpeg", f"-filter:v:{vindex}", "scale=-1:600"])
-    #         ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
-    #         ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
-    #         printlines.append(
-    #             f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
-    #         )
-    #         vindex += 1
+    for stream in ffprobe.streams:
+        if stream.codec_type == "video" and stream.codec_name == "mjpeg" and stream.tags.filename == "cover.jpg":
+            disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
+            midlines.append(f"{Color.BLUE}0:{stream.index} {Color.GREEN}attached picture {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.YELLOW}{disposition}{Style.RESET_ALL}")
+            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+            ffmpeg_recoding.extend([f"-c:v:{vindex}", "mjpeg", f"-filter:v:{vindex}", "scale=-1:600"])
+            # ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
+            ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
+            printlines.append(
+                f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
+            )
+            vindex += 1
 
     printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------{Style.RESET_ALL}")
 

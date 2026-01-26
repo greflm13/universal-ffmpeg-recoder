@@ -117,7 +117,7 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
 
     @ffmpeg.on("start")
     def on_start(arguments: list[str]):
-        logger.info("FFmpeg recoding started")
+        logger.info("FFmpeg recoding started", extra={"cmd": " ".join(arguments)})
         print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
 
     @ffmpeg.on("progress")
