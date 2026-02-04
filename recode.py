@@ -68,10 +68,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=["eng", "deu"], dest="infolang")
     parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=["eng", "ger"], dest="sublang")
     parser.add_argument("--searchstring", help="Manual search string for TVDB API", required=False, default=None, dest="searchstring", metavar="SEARCHSTRING")
+    parser.add_argument("--omit-cover", help="Don't include cover in output file", required=False, action="store_true", dest="omitcover")
     return parser.parse_args()
 
 
-def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang: str, sublang: str, subdir: str = "", codec: str = "h265", bit: int = 10, output: str = "", copy: bool = False, searchstring: str | None = None):
+def recode_series(
+    folder: str,
+    apitokens: APITokens | None,
+    lang: str,
+    infolang: str,
+    sublang: str,
+    subdir: str = "",
+    codec: str = "h265",
+    bit: int = 10,
+    output: str = "",
+    copy: bool = False,
+    searchstring: str | None = None,
+    omit_cover: bool = False,
+):
     logger.info("Starting series recode process", extra={"folder": folder})
     if apitokens is None:
         logger.info("No API tokens provided")
@@ -111,6 +125,7 @@ def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang:
                         bit=bit,
                         output=output,
                         copy=copy,
+                        omit_cover=omit_cover,
                     )
         else:
             season, name, metadata = get_episode(series, dire, seriesobj)
@@ -130,6 +145,7 @@ def recode_series(folder: str, apitokens: APITokens | None, lang: str, infolang:
                     bit=bit,
                     output=output,
                     copy=copy,
+                    omit_cover=omit_cover,
                 )
 
 
@@ -148,8 +164,9 @@ def recode(
     output: str = "",
     copy: bool = False,
     searchstring: str | None = None,
+    omit_cover: bool = False,
 ):
-    logger.info("Recode parameters", extra={"codec": codec, "bit": bit, "type": stype, "copy": copy})
+    logger.info("Recode parameters", extra={"codec": codec, "bit": bit, "type": stype, "copy": copy, "omit_cover": omit_cover})
     prelines = []
     midlines = []
     printlines = []
@@ -270,7 +287,7 @@ def recode(
         if subdir != "" and os.path.isdir(subdir):
             episode = re.findall(r"[Ss]\d{2,4}[Ee]\d{2,4}", str(path))[0]
             files = os.listdir(subdir)
-            subfile = [fil for fil in files if episode.lower() in fil.lower()]
+            subfile = [str(fil) for fil in files if episode.lower() in fil.lower()]
             if len(subfile) == 1:
                 subfile = os.path.join(subdir, subfile[0])
                 if os.path.isdir(subfile):
@@ -281,7 +298,9 @@ def recode(
         elif subdir != "" and os.path.isfile(subdir):
             subfile = [subdir]
         else:
-            subfile = [get_subtitles_from_ost(token=apitokens["opensub"], metadata=metadata, lang=sublang, file=file)]
+            subfil = get_subtitles_from_ost(token=apitokens["opensub"], metadata=metadata, lang=sublang, file=file)
+            if subfil is not None:
+                subfile = [subfil]
         try:
             for fil in subfile:
                 sub = probe(os.path.realpath(fil))
@@ -305,18 +324,19 @@ def recode(
         )
         tindex += 1
 
-    for stream in ffprobe.streams:
-        if stream.codec_type == "video" and stream.codec_name == "mjpeg" and stream.tags.filename == "cover.jpg":
-            disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
-            midlines.append(f"{Color.BLUE}0:{stream.index} {Color.GREEN}attached picture {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.YELLOW}{disposition}{Style.RESET_ALL}")
-            ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
-            ffmpeg_recoding.extend([f"-c:v:{vindex}", "mjpeg", f"-filter:v:{vindex}", "scale=-1:600"])
-            # ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
-            ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
-            printlines.append(
-                f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
-            )
-            vindex += 1
+    if not omit_cover:
+        for stream in ffprobe.streams:
+            if stream.codec_type == "video" and stream.codec_name == "mjpeg" and stream.tags.filename == "cover.jpg":
+                disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
+                midlines.append(f"{Color.BLUE}0:{stream.index} {Color.GREEN}attached picture {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.YELLOW}{disposition}{Style.RESET_ALL}")
+                ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
+                ffmpeg_recoding.extend([f"-c:v:{vindex}", "mjpeg", f"-filter:v:{vindex}", "scale=-1:600"])
+                # ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
+                ffmpeg_dispositions.extend([f"-disposition:v:{vindex}", "attached_pic"])
+                printlines.append(
+                    f"Copying {Color.GREEN}attached picture{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
+                )
+                vindex += 1
 
     printlines.append(f"{Color.LIGHTBLACK_EX}|------------------------------------------------------------------{Style.RESET_ALL}")
 
@@ -554,6 +574,7 @@ def main():
                     output=args.output,
                     copy=args.copy,
                     searchstring=args.searchstring,
+                    omit_cover=args.omit_cover,
                 )
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
@@ -576,6 +597,7 @@ def main():
                         output=args.output,
                         copy=args.copy,
                         searchstring=args.searchstring,
+                        omit_cover=args.omit_cover,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -604,6 +626,7 @@ def main():
                         output=args.output,
                         copy=args.copy,
                         searchstring=args.searchstring,
+                        omit_cover=args.omit_cover,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -631,6 +654,7 @@ def main():
                     output=args.output,
                     copy=args.copy,
                     searchstring=args.searchstring,
+                    omit_cover=args.omit_cover,
                 )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -650,6 +674,7 @@ def main():
                 output=args.output,
                 copy=args.copy,
                 searchstring=args.searchstring,
+                omit_cover=args.omit_cover,
             )
     elif args.contentype == "rename":
         logger.info("Processing rename operation")

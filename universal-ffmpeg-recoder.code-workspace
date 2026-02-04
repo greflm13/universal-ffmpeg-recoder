@@ -13,7 +13,8 @@
         "envManager": "ms-python.python:pyenv",
         "packageManager": "ms-python.python:pip"
       }
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "standard"
   },
   "launch": {
     "version": "0.2.0",
@@ -24,8 +25,8 @@
         "request": "launch",
         "program": "${workspaceFolder}/recode.py",
         "console": "integratedTerminal",
-        "args": ["-t", "series", "-l", "chi", "--infolang", "eng", "--sublang", "eng"],
-        "cwd": "/mnt/nfs/series/other/Lord of Mysteries (2025)"
+        "args": ["-t", "film", "-l", "ger", "-i", "Das.Geheimnis.der.Mondprinzessin.German.2008.DVDRip.XviD-ViDEOWELT.avi"],
+        "cwd": "/home/user/Videos"
       },
       {
         "name": "Generate Schema",

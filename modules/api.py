@@ -470,7 +470,7 @@ def get_episode(series: str, file: str, seriesobj: list) -> tuple[str | None, st
     return None, None, None
 
 
-def get_subtitles_from_ost(token: OpenSubtitlesToken, metadata: dict, lang: str, file: str):
+def get_subtitles_from_ost(token: OpenSubtitlesToken, metadata: dict, lang: str, file: str) -> str | None:
     if token.get("token", None) is None:
         return None
     headers = {"Content-Type": "application/json", "Api-Key": token["api_key"], "User-Agent": "recoder v1.0.1", "Authorization": f"Bearer {token['token']}"}
