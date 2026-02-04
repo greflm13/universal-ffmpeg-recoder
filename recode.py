@@ -68,7 +68,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=["eng", "deu"], dest="infolang")
     parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=["eng", "ger"], dest="sublang")
     parser.add_argument("--searchstring", help="Manual search string for TVDB API", required=False, default=None, dest="searchstring", metavar="SEARCHSTRING")
-    parser.add_argument("--omit-cover", help="Don't include cover in output file", required=False, action="store_true", dest="omit_cover")
+    parser.add_argument("--omit-cover", help="Don't include cover in output file", required=False, action="store_true", dest="omitcover")
+    parser.add_argument("--sub-selector", help="Regex to select subtitle stream based on title", required=False, default=None, dest="subselector", metavar="REGEX")
     return parser.parse_args()
 
 
@@ -85,6 +86,7 @@ def recode_series(
     copy: bool = False,
     searchstring: str | None = None,
     omit_cover: bool = False,
+    subselector: Optional[str] = None,
 ):
     logger.info("Starting series recode process", extra={"folder": folder})
     if apitokens is None:
@@ -126,6 +128,7 @@ def recode_series(
                         output=output,
                         copy=copy,
                         omit_cover=omit_cover,
+                        subselector=subselector,
                     )
         else:
             season, name, metadata = get_episode(series, dire, seriesobj)
@@ -146,6 +149,7 @@ def recode_series(
                     output=output,
                     copy=copy,
                     omit_cover=omit_cover,
+                    subselector=subselector,
                 )
 
 
@@ -165,6 +169,7 @@ def recode(
     copy: bool = False,
     searchstring: str | None = None,
     omit_cover: bool = False,
+    subselector: Optional[str] = None,
 ):
     logger.info("Recode parameters", extra={"codec": codec, "bit": bit, "type": stype, "copy": copy, "omit_cover": omit_cover})
     prelines = []
@@ -281,7 +286,7 @@ def recode(
             aindex += 1
 
     for stream in subtitlestreams:
-        sindex, changeslang = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions, changeslang, sublang)
+        sindex, changeslang = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions, changeslang, sublang, subselector=subselector)
 
     if sindex == 0:
         if subdir != "" and os.path.isdir(subdir):
@@ -574,7 +579,8 @@ def main():
                     output=args.output,
                     copy=args.copy,
                     searchstring=args.searchstring,
-                    omit_cover=args.omit_cover,
+                    omit_cover=args.omitcover,
+                    subselector=args.subselector,
                 )
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
@@ -597,7 +603,8 @@ def main():
                         output=args.output,
                         copy=args.copy,
                         searchstring=args.searchstring,
-                        omit_cover=args.omit_cover,
+                        omit_cover=args.omitcover,
+                        subselector=args.subselector,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -626,7 +633,8 @@ def main():
                         output=args.output,
                         copy=args.copy,
                         searchstring=args.searchstring,
-                        omit_cover=args.omit_cover,
+                        omit_cover=args.omitcover,
+                        subselector=args.subselector,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -654,7 +662,8 @@ def main():
                     output=args.output,
                     copy=args.copy,
                     searchstring=args.searchstring,
-                    omit_cover=args.omit_cover,
+                    omit_cover=args.omitcover,
+                    subselector=args.subselector,
                 )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -674,7 +683,8 @@ def main():
                 output=args.output,
                 copy=args.copy,
                 searchstring=args.searchstring,
-                omit_cover=args.omit_cover,
+                omit_cover=args.omitcover,
+                subselector=args.subselector,
             )
     elif args.contentype == "rename":
         logger.info("Processing rename operation")

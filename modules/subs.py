@@ -1,3 +1,5 @@
+import re
+
 from colorama import Fore as Color
 from colorama import Style
 
@@ -18,6 +20,7 @@ def subtitles(
     dispositions: dict[str, dict[str, str | list[str]]],
     changeslang: list,
     lang: str,
+    subselector: str | None = None,
     file=0,
 ):
     logger.info("Processing subtitle stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language if stream.tags else None})
@@ -54,12 +57,12 @@ def subtitles(
             "lang": stream.tags.language,
             "types": dispositiontypes,
         }
-        update_subtitle_default(sdefault, stream, sindex, dispositions, lang)
+        update_subtitle_default(sdefault, stream, sindex, dispositions, lang, subselector=subselector)
         sindex += 1
     return sindex, changeslang
 
 
-def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[str, dict[str, str | list[str]]], lang: str):
+def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[str, dict[str, str | list[str]]], lang: str, subselector: str | None = None):
     logger.info("Updating subtitle default", extra={"stream_index": sindex, "language": stream.tags.language})
     subtitle_type = "none"
     if stream.tags.title:
@@ -70,7 +73,18 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
             subtitle_type = "sdh"
         elif "forced" in title_lower:
             subtitle_type = "forced"
-    if (stream.tags.language == lang or stream.tags.language is None) and (SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0)):
+
+    # Truthy table for subtitle selection:
+    # 1. If the stream language matches the desired language or is None, and the subtitle type has a higher priority than the current default, select it.
+    # 2. If a subselector is provided and matches the stream title, and either the current default title does not match the subselector or the stream has a higher subtitle type priority than the current default, select it.
+    if ((stream.tags.language == lang or stream.tags.language is None) and (SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0))) or (
+        subselector
+        and re.search(subselector, stream.tags.title or "", re.IGNORECASE)
+        and (
+            (sdefault["title"] and re.search(subselector, sdefault["title"], re.IGNORECASE) is None)
+            or (sdefault["title"] and re.search(subselector, sdefault["title"], re.IGNORECASE) and (SUBTITLE_PRIORITY.get(subtitle_type, 0) > SUBTITLE_PRIORITY.get(sdefault["type"], 0)))
+        )
+    ):
         sdefault.update(
             {
                 "lang": stream.tags.language,
