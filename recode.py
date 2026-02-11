@@ -48,6 +48,7 @@ def parse_args() -> argparse.Namespace:
             "ger",
             "jpn",
             "kor",
+            "mul",
             "rus",
             "spa",
         ],
