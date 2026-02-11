@@ -1,13 +1,15 @@
 from colorama import Fore as Color
 from colorama import Style
 
-from modules.ffprobe import Stream, StreamTags
+from modules.datatypes import Stream, StreamTags, Dispositions
 from modules.logger import logger
 
 AUDIO_PRIORITY = {"dts": 6, "flac": 5, "opus": 4, "truehd": 3, "eac3": 2, "ac3": 1}
 
 
 def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list, lang: str = "eng"):
+    if stream.tags is None:
+        stream.tags = StreamTags()
     logger.info("Processing audio stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language})
     if stream.codec_name in AUDIO_PRIORITY.keys():
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
@@ -34,6 +36,10 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
 
 
 def update_audio_default(adefault: dict, stream: Stream, aindex: int, lang: str = "eng"):
+    if stream.tags is None:
+        stream.tags = StreamTags()
+    if stream.codec_name is None:
+        stream.codec_name = "unknown"
     logger.info("Updating audio default", extra={"stream_index": aindex, "language": stream.tags.language, "codec": stream.codec_name})
     if (
         (stream.channels > adefault["channels"] and stream.tags.language == lang)
@@ -61,22 +67,22 @@ def audio(
     adefault: dict,
     astreams: list,
     printlines: list,
-    dispositions: dict[str, dict[str, str | list[str]]],
+    dispositions: dict[str, Dispositions],
     changealang: list,
     lang: str = "eng",
 ):
     if stream.tags is None:
-        stream.tags = StreamTags.from_dict({"title": None})
+        stream.tags = StreamTags()
     if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None, lang]:
         arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang)
         dispositiontypes = [dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]]
-        dispositions["a" + str(aindex)] = {
-            "stype": "a",
-            "index": aindex,
-            "title": stream.tags.title,
-            "lang": stream.tags.language,
-            "types": dispositiontypes,
-        }
+        dispositions["a" + str(aindex)] = Dispositions(
+            stype="a",
+            index=aindex,
+            title=stream.tags.title,
+            lang=stream.tags.language,
+            types=dispositiontypes,
+        )
         if stream.tags.language == "ger":
             changealang.append({"index": aindex, "lang": "deu"})
             stream.tags.language = "deu"

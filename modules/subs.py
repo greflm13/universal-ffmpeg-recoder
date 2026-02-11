@@ -3,7 +3,7 @@ import re
 from colorama import Fore as Color
 from colorama import Style
 
-from modules.ffprobe import Stream, StreamTags
+from modules.datatypes import Stream, StreamTags, Dispositions
 from modules.logger import logger
 
 SUBTITLE_PRIORITY = {"forced": 4, "full": 3, "none": 1}
@@ -17,7 +17,7 @@ def subtitles(
     sdefault: dict,
     sstreams: list,
     printlines: list,
-    dispositions: dict[str, dict[str, str | list[str]]],
+    dispositions: dict[str, Dispositions],
     changeslang: list,
     lang: str,
     subselector: str | None = None,
@@ -50,19 +50,21 @@ def subtitles(
         obj["newindex"] = sindex
         sstreams.append(obj)
         dispositiontypes = [dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]]
-        dispositions["s" + str(sindex)] = {
-            "stype": "s",
-            "index": sindex,
-            "title": stream.tags.title,
-            "lang": stream.tags.language,
-            "types": dispositiontypes,
-        }
+        dispositions["s" + str(sindex)] = Dispositions(
+            stype="s",
+            index=sindex,
+            title=stream.tags.title,
+            lang=stream.tags.language,
+            types=dispositiontypes,
+        )
         update_subtitle_default(sdefault, stream, sindex, dispositions, lang, subselector=subselector)
         sindex += 1
     return sindex, changeslang
 
 
-def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[str, dict[str, str | list[str]]], lang: str, subselector: str | None = None):
+def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, dispositions: dict[str, Dispositions], lang: str, subselector: str | None = None):
+    if stream.tags is None:
+        stream.tags = StreamTags()
     logger.info("Updating subtitle default", extra={"stream_index": sindex, "language": stream.tags.language})
     subtitle_type = "none"
     if stream.tags.title:
@@ -98,15 +100,15 @@ def update_subtitle_default(sdefault: dict, stream: Stream, sindex: int, disposi
     if subtitle_type == "forced" or stream.disposition.forced:
         stype = "s"
         if dispositions.get(stype + str(sindex), False):
-            if "forced" not in dispositions.get(stype + str(sindex))["types"]:
-                dispositions.get(stype + str(sindex))["types"].append("forced")
+            if "forced" not in dispositions[stype + str(sindex)].types:
+                dispositions[stype + str(sindex)].types.append("forced")
         else:
-            dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["forced"]}
+            dispositions[stype + str(sindex)] = Dispositions(stype=stype, index=sindex, title=stream.tags.title, lang=stream.tags.language, types=["forced"])
         stream.disposition.forced = True
     if subtitle_type == "sdh" or stream.disposition.hearing_impaired:
         stype = "s"
         if dispositions.get(stype + str(sindex), False):
-            if "hearing_impaired" not in dispositions.get(stype + str(sindex))["types"]:
-                dispositions.get(stype + str(sindex))["types"].append("hearing_impaired")
+            if "hearing_impaired" not in dispositions[stype + str(sindex)].types:
+                dispositions[stype + str(sindex)].types.append("hearing_impaired")
         else:
-            dispositions[stype + str(sindex)] = {"stype": stype, "index": str(sindex), "title": stream.tags.title, "lang": stream.tags.language, "types": ["hearing_impaired"]}
+            dispositions[stype + str(sindex)] = Dispositions(stype=stype, index=sindex, title=stream.tags.title, lang=stream.tags.language, types=["hearing_impaired"])

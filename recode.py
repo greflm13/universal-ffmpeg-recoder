@@ -14,7 +14,7 @@ from colorama import Fore as Color
 from colorama import Style
 from rich_argparse import RichHelpFormatter
 
-from modules.ffprobe import StreamTags, Stream
+from modules.datatypes import StreamTags, Stream, Dispositions
 from modules.api import api_login, change_episode_number, change_season_type, get_episode, get_movie_name, get_series_from_tvdb, get_subtitles_from_ost, logout, APITokens
 from modules.video import video
 from modules.audio import audio, recode_audio
@@ -187,7 +187,7 @@ def recode(
 
     changealang: list[dict[str, str]] = []
     changeslang: list[dict[str, str]] = []
-    dispositions: dict[str, dict[str, str | list[str]]] = {}
+    dispositions: dict[str, Dispositions] = {}
 
     astreams = []
     sstreams = []
@@ -209,6 +209,7 @@ def recode(
     changemetadata = False
 
     subfile = ""
+    pix_fmt = ""
 
     if apitokens is None:
         logger.debug("No API tokens provided, using None tokens")
@@ -247,7 +248,7 @@ def recode(
     midlines.append(f"{Color.RED}Streams{Style.RESET_ALL}:")
     for stream in ffprobe.streams:
         if stream.tags is None:
-            stream.tags = StreamTags(title=None, language=None)
+            stream.tags = StreamTags()
         disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
         if stream.codec_type != "attachment":
             if stream.codec_type == "video" and not (stream.disposition.attached_pic or stream.codec_name == "mjpeg"):
@@ -278,6 +279,8 @@ def recode(
         vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, dispositions, HWACC, codec, bit, copy)
 
     for stream in audiostreams:
+        if stream.tags is None:
+            stream.tags = StreamTags()
         logger.info("Processing audio stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language})
         arecoding, aindex, changealang = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, dispositions, changealang, lang)
 
@@ -314,7 +317,7 @@ def recode(
                 additional_files.append(os.path.realpath(fil))
                 for stream in sub.streams:
                     if stream.tags is None:
-                        stream.tags = StreamTags.from_dict({"title": None, "language": sublang})
+                        stream.tags = StreamTags(language=sublang)
                     disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
                     midlines.append(
                         f"{Color.BLUE}1:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
@@ -324,6 +327,8 @@ def recode(
             ...
 
     for stream in attachmentstreams:
+        if stream.tags is None:
+            stream.tags = StreamTags()
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         printlines.append(
             f"Copying {Color.GREEN}attachment{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.filename}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name}{Style.RESET_ALL} and index {Color.BLUE}t:{tindex}{Style.RESET_ALL} in output file"
@@ -332,6 +337,8 @@ def recode(
 
     if not omit_cover:
         for stream in ffprobe.streams:
+            if stream.tags is None:
+                stream.tags = StreamTags()
             if stream.codec_type == "video" and stream.codec_name == "mjpeg" and stream.tags.filename == "cover.jpg":
                 disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
                 midlines.append(f"{Color.BLUE}0:{stream.index} {Color.GREEN}attached picture {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.YELLOW}{disposition}{Style.RESET_ALL}")
@@ -349,35 +356,35 @@ def recode(
     if aindex > 0 and adefault["aindex"] is not None:
         for stream in astreams:
             if adefault["aindex"] != stream["newindex"] and not dispositions.get("a" + str(stream["newindex"]), False):
-                if "default" in dispositions["a" + str(stream["newindex"])]["types"]:
-                    dispositions["a" + str(stream["newindex"])]["types"].remove("default")
+                if "default" in dispositions["a" + str(stream["newindex"])].types:
+                    dispositions["a" + str(stream["newindex"])].types.remove("default")
             elif adefault["aindex"] == stream["newindex"] and dispositions.get("a" + str(stream["newindex"]), False):
-                if "default" not in dispositions["a" + str(stream["newindex"])]["types"]:
-                    dispositions["a" + str(stream["newindex"])]["types"].append("default")
+                if "default" not in dispositions["a" + str(stream["newindex"])].types:
+                    dispositions["a" + str(stream["newindex"])].types.append("default")
             elif adefault["aindex"] == stream["newindex"] and not dispositions.get("a" + str(stream["newindex"]), False) and not stream["disposition"].get("default", False):
-                dispositions["a" + str(stream["newindex"])] = {
-                    "stype": "a",
-                    "index": stream["newindex"],
-                    "title": stream["tags"].get("title", "None"),
-                    "lang": stream["tags"]["language"],
-                    "types": ["default"],
-                }
+                dispositions["a" + str(stream["newindex"])] = Dispositions(
+                    stype="a",
+                    index=stream["newindex"],
+                    title=stream["tags"].get("title", "None"),
+                    lang=stream["tags"]["language"],
+                    types=["default"],
+                )
     if sindex > 0 and sdefault["sindex"] is not None:
         for stream in sstreams:
             if sdefault["sindex"] != stream["newindex"] and not dispositions.get("s" + str(stream["newindex"]), False):
-                if "default" in dispositions["s" + str(stream["newindex"])]["types"]:
-                    dispositions["s" + str(stream["newindex"])]["types"].remove("default")
+                if "default" in dispositions["s" + str(stream["newindex"])].types:
+                    dispositions["s" + str(stream["newindex"])].types.remove("default")
             elif sdefault["sindex"] == stream["newindex"] and dispositions.get("s" + str(stream["newindex"]), False):
-                if "default" not in dispositions["s" + str(stream["newindex"])]["types"]:
-                    dispositions["s" + str(stream["newindex"])]["types"].append("default")
+                if "default" not in dispositions["s" + str(stream["newindex"])].types:
+                    dispositions["s" + str(stream["newindex"])].types.append("default")
             elif sdefault["sindex"] == stream["newindex"] and not dispositions.get("s" + str(stream["newindex"]), False):
-                dispositions["s" + str(stream["newindex"])] = {
-                    "stype": "s",
-                    "index": stream["newindex"],
-                    "title": stream["tags"].get("title", "None"),
-                    "lang": stream["tags"].get("language", "und"),
-                    "types": ["default"],
-                }
+                dispositions["s" + str(stream["newindex"])] = Dispositions(
+                    stype="s",
+                    index=stream["newindex"],
+                    title=stream["tags"].get("title", "None"),
+                    lang=stream["tags"].get("language", "und"),
+                    types=["default"],
+                )
 
     if len(changealang) > 0:
         for change in changealang:
@@ -392,38 +399,43 @@ def recode(
             changedefault = True
 
     for disposition in dispositions.values():
-        if disposition["stype"] == "s":
+        if disposition.stype == "s":
             typ = "subtitle"
-        elif disposition["stype"] == "a":
+        elif disposition.stype == "a":
             typ = "audio"
-        elif disposition["stype"] == "v":
+        elif disposition.stype == "v":
             typ = "video"
-        if disposition["types"] == []:
-            disposition["types"] = ["none"]
-        ffmpeg_dispositions.extend([f"-disposition:{disposition['stype']}:{disposition['index']}", "+".join(disposition["types"])])
+        else:
+            typ = "unknown"
+        if disposition.types == []:
+            disposition.types = ["none"]
+        ffmpeg_dispositions.extend([f"-disposition:{disposition.stype}:{disposition.index}", "+".join(disposition.types)])
         if typ == "subtitle":
-            before = " ".join(sorted([k for k, v in sstreams[int(disposition["index"])]["disposition"].items() if v]))
+            before = " ".join(sorted([k for k, v in sstreams[int(disposition.index)]["disposition"].items() if v]))
             if before == "":
                 before = "none"
-            after = " ".join(sorted(disposition["types"]))
+            after = " ".join(sorted(disposition.types))
             if before != after:
                 printlines.append(
-                    f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{disposition['title']}{Style.RESET_ALL} language {Color.MAGENTA}{disposition['lang']}{Style.RESET_ALL} to {Color.YELLOW}{after}{Style.RESET_ALL}"
+                    f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition.stype}:{disposition.index}{Style.RESET_ALL} titled {Color.CYAN}{disposition.title}{Style.RESET_ALL} language {Color.MAGENTA}{disposition.lang}{Style.RESET_ALL} to {Color.YELLOW}{after}{Style.RESET_ALL}"
                 )
                 changedefault = True
         elif typ == "audio":
-            before = " ".join(sorted([k for k, v in astreams[int(disposition["index"])]["disposition"].items() if v]))
+            before = " ".join(sorted([k for k, v in astreams[int(disposition.index)]["disposition"].items() if v]))
             if before == "":
                 before = "none"
-            after = " ".join(sorted(disposition["types"]))
+            after = " ".join(sorted(disposition.types))
             if before != after:
                 printlines.append(
-                    f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition['stype']}:{disposition['index']}{Style.RESET_ALL} titled {Color.CYAN}{disposition['title']}{Style.RESET_ALL} language {Color.MAGENTA}{disposition['lang']}{Style.RESET_ALL} to {Color.YELLOW}{after}{Style.RESET_ALL}"
+                    f"Setting {Color.GREEN}{typ}{Style.RESET_ALL} stream {Color.BLUE}{disposition.stype}:{disposition.index}{Style.RESET_ALL} titled {Color.CYAN}{disposition.title}{Style.RESET_ALL} language {Color.MAGENTA}{disposition.lang}{Style.RESET_ALL} to {Color.YELLOW}{after}{Style.RESET_ALL}"
                 )
                 changedefault = True
 
     try:
-        format_tags = ffprobe.format.tags.to_dict()
+        if ffprobe.format is not None and ffprobe.format.tags is not None:
+            format_tags = ffprobe.format.tags.to_dict()
+        else:
+            format_tags = {}
     except AttributeError:
         format_tags = {}
 
@@ -548,7 +560,7 @@ def main():
         apitokens = api_login(configpath)
     else:
         logger.info("APIs disabled")
-        apitokens = None
+        apitokens = APITokens(thetvdb=None, opensub={"api_key": None, "token": None})
 
     if not args.infolang:
         infolang = args.lang
@@ -694,13 +706,16 @@ def main():
         logger.info("Rename info", extra={"folder": folder, "series": series})
         parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
         seriesobj, seriesname, year = get_series_from_tvdb(series, apitokens["thetvdb"], lang=infolang, searchstring=args.searchstring)
+        if seriesobj is None:
+            logger.error("Failed to retrieve series info", extra={"series": series})
+            return
         if year != "":
             series = f"{seriesname} ({year})"
         for dire in sorted(os.listdir(folder)):
             if os.path.isdir(dire):
                 for subdir in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
                     season, name, _ = get_episode(series, subdir, seriesobj)
-                    if name is not None:
+                    if name is not None and season is not None:
                         if not os.path.exists(os.path.join(parentfolder, series, season)):
                             os.makedirs(os.path.join(parentfolder, series, season))
                         old = os.path.join(folder, dire, subdir)
@@ -710,7 +725,7 @@ def main():
                             shutil.move(old, new)
             else:
                 season, name, _ = get_episode(series, dire, seriesobj)
-                if name is not None:
+                if name is not None and season is not None:
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
                         os.makedirs(os.path.join(parentfolder, series, season))
                     old = os.path.join(folder, dire)
@@ -719,19 +734,26 @@ def main():
                         print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                         shutil.move(old, new)
     elif args.contentype == "changeSeasonType":
+        if apitokens["thetvdb"] is None:
+            logger.error("TheTVDB API token required for changing season type")
+            print("error: TheTVDB API token required for changing season type")
+            return
         logger.info("Processing season type change")
         folder = os.getcwd()
         series = os.path.basename(folder)
         logger.info("Change season type info", extra={"folder": folder, "series": series})
         parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
         currseriesobj, destseriesobj, seriesname, year = change_season_type(series, apitokens["thetvdb"], lang=infolang)
+        if currseriesobj is None or destseriesobj is None:
+            logger.error("Failed to retrieve series info for season type change", extra={"series": series})
+            return
         if year != "":
             series = f"{seriesname} ({year})"
         for dire in sorted(os.listdir(folder)):
             if os.path.isdir(dire):
                 for subdir in sorted(os.listdir(os.path.realpath(os.path.join(folder, dire)))):
                     season, name = change_episode_number(series, subdir, currseriesobj, destseriesobj)
-                    if name is not None:
+                    if name is not None and season is not None:
                         if not os.path.exists(os.path.join(parentfolder, series, season)):
                             os.makedirs(os.path.join(parentfolder, series, season))
                         old = os.path.join(folder, dire, subdir)
@@ -740,7 +762,7 @@ def main():
                             print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                             shutil.move(old, new)
             else:
-                season, name = change_episode_number(series, subdir, currseriesobj, destseriesobj)
+                season, name = change_episode_number(series, dire, currseriesobj, destseriesobj)
                 if name is not None and season is not None:
                     if not os.path.exists(os.path.join(parentfolder, series, season)):
                         os.makedirs(os.path.join(parentfolder, series, season))

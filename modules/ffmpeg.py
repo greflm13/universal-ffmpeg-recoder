@@ -5,7 +5,7 @@ import os
 from colorama import Fore as Color, Style
 from ffmpeg import FFmpeg, Progress, errors
 
-from modules.ffprobe import Ffprobe
+from modules.datatypes import Ffprobe
 from modules.logger import logger
 
 

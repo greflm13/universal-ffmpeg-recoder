@@ -148,8 +148,9 @@ def build_choice_list(option_list: list[dict[str, str | dict[str, str]]], lang: 
     return choice_list
 
 
-def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single", searchstring: str | None = None) -> tuple[str, dict[str, str] | dict[str, Any]]:
+def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single", searchstring: str | None = None) -> tuple[str | None, dict[str, str] | dict[str, Any] | None]:
     logger.info("Getting movie name", extra={"file": file, "language": lang, "type": stype})
+    year = ""
     for container in VIDEO_CONTAINERS:
         if file.endswith(container):
             metadata = {"title": os.path.splitext(file)[0]}
@@ -171,7 +172,6 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                     movie_name = searchstring
                 else:
                     movie_name = input("No regex match! Enter search string: ")
-                    year = ""
             found = False
             while not found:
                 logger.info("Searching for movie", extra={"search": movie_name, "year": year, "language": lang})
@@ -207,8 +207,12 @@ def get_movie_name(file: str, token: str | None, lang: str, stype: str = "single
                         comment = ret["overviews"][lang]
                     elif "overviews" in ret and "eng" in ret["overviews"]:
                         comment = ret["overviews"]["eng"]
+                    else:
+                        comment = None
                     if "first_air_time" in ret and ret["first_air_time"] != "":
                         date = ret["first_air_time"]
+                    else:
+                        date = None
                     if "translations" in ret and lang in ret["translations"]:
                         metadata = {"comment": comment, "title": f"{ret['translations'][lang]} ({ret['year']})", "date": date}
                         output_file = f"{ret['translations'][lang].replace('/', '-')} ({ret['year']}).mkv"
@@ -263,7 +267,7 @@ def find_series_id(series: str, token: str, lang: str, searchstring: str | None 
             match = re.search(r"\((\d{4})\)", series)
         try:
             seriesyear = match.groups()[0]  # type: ignore
-            queryseries = urllib.parse.quote(series[: match.start()].strip())
+            queryseries = urllib.parse.quote(series[: match.start()].strip())  # type: ignore
         except AttributeError:
             seriesyear = ""
             if searchstring is not None:
@@ -288,8 +292,8 @@ def find_series_id(series: str, token: str, lang: str, searchstring: str | None 
         print(f"{Color.RED}err: {Style.RESET_ALL}Series not found! {Color.BLUE}{series}{Style.RESET_ALL}")
         return None
     choice = questionary.select("Select TV Show:\n  ", choices=choices, style=questionary_style).ask()
-    logger.info("Series ID found", extra={"series_id": response.json()["data"][choice]["id"].removeprefix("series-")})
-    return response.json()["data"][choice]["id"].removeprefix("series-")
+    logger.info("Series ID found", extra={"series_id": res[choice]["id"].removeprefix("series-")})
+    return res[choice]["id"].removeprefix("series-")
 
 
 @cache
@@ -414,7 +418,7 @@ def change_episode_number(series: str, file: str, seriesobj: list, destobj: list
     return None, None
 
 
-def get_episode(series: str, file: str, seriesobj: list) -> tuple[str | None, str | None, dict[str, str] | None]:
+def get_episode(series: str, file: str, seriesobj: list[dict[str, str | dict[str, str]]]) -> tuple[str | None, str | None, dict[str, str] | None]:
     if os.path.splitext(file)[1] in VIDEO_CONTAINERS:
         match = re.search(r"[Ss](\d{1,4})\s?(([Ee]\d{1,4})+)", file)
         if match:

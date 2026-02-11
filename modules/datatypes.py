@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Any, List, TypeVar, Type, cast, Callable
 from datetime import datetime
 import dateutil.parser
@@ -1204,3 +1204,11 @@ def f_fprobe_from_dict(s: Any) -> Ffprobe:
 
 def f_fprobe_to_dict(x: Ffprobe) -> Any:
     return to_class(Ffprobe, x)
+
+@dataclass
+class Dispositions:
+    stype: str
+    index: int
+    title: Optional[str] = None
+    lang: Optional[str] = None
+    types: List[str] = field(default_factory=list)

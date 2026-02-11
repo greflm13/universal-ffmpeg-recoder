@@ -1,11 +1,11 @@
 from colorama import Fore as Color
 from colorama import Style
 
-from modules.ffprobe import Stream, StreamTags
+from modules.datatypes import Stream, StreamTags, Dispositions
 from modules.logger import logger
 
 
-def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list, dispositions: dict[str, dict[str, str | list[str]]], hwacc: str | None, codec="av1", bit=10, copy=False):
+def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list, dispositions: dict[str, Dispositions], hwacc: str | None, codec="av1", bit=10, copy=False):
     logger.info("Processing video stream", extra={"index": stream.index, "codec": stream.codec_name, "pix_fmt": stream.pix_fmt, "bit_depth": bit, "target_codec": codec})
     codecd = {"name": "av1", "swenc": "libsvtav1", "amdenc": "av1_amf", "nvdenc": "av1_nvenc"}
     if codec == "av1":
@@ -36,12 +36,12 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
             f"Copying {Color.GREEN}video{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} with codec {Color.RED}{stream.codec_name} {Color.YELLOW}{stream.pix_fmt}{Style.RESET_ALL} and index {Color.BLUE}v:{vindex}{Style.RESET_ALL} in output file"
         )
     dispositiontypes = [dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]]
-    dispositions["v" + str(vindex)] = {
-        "stype": "v",
-        "index": vindex,
-        "title": stream.tags.title,
-        "lang": stream.tags.language,
-        "types": dispositiontypes,
-    }
+    dispositions["v" + str(vindex)] = Dispositions(
+        stype="v",
+        index=vindex,
+        title=stream.tags.title,
+        lang=stream.tags.language,
+        types=dispositiontypes,
+    )
     vindex += 1
     return vrecoding, vindex, stream.pix_fmt
