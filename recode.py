@@ -499,7 +499,16 @@ def recode(
             else:
                 ffmpeg_recoding.extend(["-pixel_format", "yuv420p"])
     if arecoding:
-        ffmpeg_recoding.extend(["-b:a", "192k", "-ar", "48000"])
+        for stream in astreams:
+            if stream["recoding"]:
+                idx = stream["newindex"]
+                chn = stream["channels"]
+                if chn <= 2:
+                    ffmpeg_recoding.extend([f"-b:a:{idx}", "128k"])
+                elif chn <= 6:
+                    ffmpeg_recoding.extend([f"-b:a:{idx}", "256k"])
+                elif chn <= 8:
+                    ffmpeg_recoding.extend([f"-b:a:{idx}", "450k"])
     for line in prelines:
         print(line)
     for line in midlines:

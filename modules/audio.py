@@ -4,13 +4,14 @@ from colorama import Style
 from modules.datatypes import Stream, StreamTags, Dispositions
 from modules.logger import logger
 
-AUDIO_PRIORITY = {"dts": 6, "flac": 5, "opus": 4, "truehd": 3, "eac3": 2, "ac3": 1}
+AUDIO_PRIORITY = {"dts": 6, "flac": 5, "opus": 4, "truehd": 3, "eac3": 2}
 
 
 def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list, lang: str = "eng"):
     if stream.tags is None:
         stream.tags = StreamTags()
     logger.info("Processing audio stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language})
+    recode = False
     if stream.codec_name in AUDIO_PRIORITY.keys():
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
@@ -21,12 +22,14 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:a:{aindex}", "libopus"])
         arecoding = True
+        recode = True
         stream.codec_name = "opus"
         printlines.append(
             f"Converting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}0:{stream.index}{Style.RESET_ALL} titled {Color.CYAN}{stream.tags.title}{Style.RESET_ALL} to codec {Color.RED}opus{Style.RESET_ALL}, language {Color.MAGENTA}{stream.tags.language}{Style.RESET_ALL} and index {Color.BLUE}a:{aindex}{Style.RESET_ALL} in output file"
         )
     obj = stream.to_dict()
     obj["newindex"] = aindex
+    obj["recoding"] = recode 
     astreams.append(obj)
 
     if stream.tags.language in ["eng", "und", "jpn", None, lang]:
