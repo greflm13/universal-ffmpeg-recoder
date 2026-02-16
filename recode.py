@@ -243,7 +243,7 @@ def recode(
         print(f"Error: {file} has no streams")
         return
 
-    logger.info("Probing file", extra={"num_streams": len(ffprobe.streams)})
+    logger.info("Probing file", extra={"ffprobe": ffprobe.to_dict()})
 
     midlines.append(f"{Color.RED}Streams{Style.RESET_ALL}:")
     for stream in ffprobe.streams:
