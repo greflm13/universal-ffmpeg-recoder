@@ -62,13 +62,13 @@ def human_readable_size(size_bytes):
     Convert a file size in bytes to a human-readable string with autoscaled units.
     """
     if size_bytes == 0:
-        return "0 B"
+        return "0B"
     units = ["B", "KB", "MB", "GB", "TB", "PB"]
     i = 0
     while size_bytes >= 1024 and i < len(units) - 1:
         size_bytes /= 1024.0
         i += 1
-    return f"{size_bytes:.2f} {units[i]}"
+    return f"{size_bytes:.2f}{units[i]}"
 
 
 def probe(file_path: str) -> Ffprobe:
