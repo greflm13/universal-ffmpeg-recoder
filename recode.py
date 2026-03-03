@@ -71,6 +71,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--searchstring", help="Manual search string for TVDB API", required=False, default=None, dest="searchstring", metavar="SEARCHSTRING")
     parser.add_argument("--omit-cover", help="Don't include cover in output file", required=False, action="store_true", dest="omitcover")
     parser.add_argument("--sub-selector", help="Regex to select subtitle stream based on title", required=False, default=None, dest="subselector", metavar="REGEX")
+    parser.add_argument("--metadata-only", help="Only change metadata, copy streams", required=False, action="store_true", dest="onlymetadata")
     return parser.parse_args()
 
 
@@ -80,6 +81,7 @@ def recode_series(
     lang: str,
     infolang: str,
     sublang: str,
+    *,
     subdir: str = "",
     codec: str = "h265",
     bit: int = 10,
@@ -88,6 +90,7 @@ def recode_series(
     searchstring: str | None = None,
     omit_cover: bool = False,
     subselector: Optional[str] = None,
+    copy_streams: bool = False,
 ):
     logger.info("Starting series recode process", extra={"folder": folder})
     if apitokens is None:
@@ -130,6 +133,7 @@ def recode_series(
                         copy=copy,
                         omit_cover=omit_cover,
                         subselector=subselector,
+                        copy_streams=copy_streams,
                     )
         else:
             season, name, metadata = get_episode(series, dire, seriesobj)
@@ -151,6 +155,7 @@ def recode_series(
                     copy=copy,
                     omit_cover=omit_cover,
                     subselector=subselector,
+                    copy_streams=copy_streams,
                 )
 
 
@@ -162,6 +167,7 @@ def recode(
     path: Optional[str] = None,
     metadata: Optional[dict] = None,
     apitokens: Optional[APITokens] = None,
+    *,
     subdir: str = "",
     codec: str = "h265",
     bit: int = 10,
@@ -171,6 +177,7 @@ def recode(
     searchstring: str | None = None,
     omit_cover: bool = False,
     subselector: Optional[str] = None,
+    copy_streams: bool = False,
 ):
     logger.info("Recode parameters", extra={"codec": codec, "bit": bit, "type": stype, "copy": copy, "omit_cover": omit_cover})
     prelines = []
@@ -282,11 +289,11 @@ def recode(
         if stream.tags is None:
             stream.tags = StreamTags()
         logger.info("Processing audio stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language})
-        arecoding, aindex, changealang = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, dispositions, changealang, lang)
+        arecoding, aindex, changealang = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, dispositions, changealang, lang, copy_streams)
 
     if aindex == 0:
         for stream in audiostreams:
-            arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines)
+            arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, copy_streams=copy_streams)
             aindex += 1
 
     for stream in subtitlestreams:
@@ -583,6 +590,9 @@ def main():
     else:
         sublang = args.sublang
 
+    if args.onlymetadata:
+        args.copy = True
+
     if args.contentype == "film":
         logger.info("Processing film content")
         if args.inputfile:
@@ -603,6 +613,7 @@ def main():
                     searchstring=args.searchstring,
                     omit_cover=args.omitcover,
                     subselector=args.subselector,
+                    copy_streams=args.onlymetadata,
                 )
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
@@ -627,6 +638,7 @@ def main():
                         searchstring=args.searchstring,
                         omit_cover=args.omitcover,
                         subselector=args.subselector,
+                        copy_streams=args.onlymetadata,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -657,6 +669,7 @@ def main():
                         searchstring=args.searchstring,
                         omit_cover=args.omitcover,
                         subselector=args.subselector,
+                        copy_streams=args.onlymetadata,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -686,6 +699,7 @@ def main():
                     searchstring=args.searchstring,
                     omit_cover=args.omitcover,
                     subselector=args.subselector,
+                    copy_streams=args.onlymetadata,
                 )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -707,6 +721,7 @@ def main():
                 searchstring=args.searchstring,
                 omit_cover=args.omitcover,
                 subselector=args.subselector,
+                copy_streams=args.onlymetadata,
             )
     elif args.contentype == "rename":
         logger.info("Processing rename operation")

@@ -7,12 +7,12 @@ from modules.logger import logger
 AUDIO_PRIORITY = {"dts": 6, "flac": 5, "opus": 4, "truehd": 3, "eac3": 2}
 
 
-def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list, lang: str = "eng"):
+def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list, lang: str = "eng", copy_streams: bool = False):
     if stream.tags is None:
         stream.tags = StreamTags()
     logger.info("Processing audio stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language})
     recode = False
-    if stream.codec_name in AUDIO_PRIORITY.keys():
+    if stream.codec_name in AUDIO_PRIORITY.keys() or copy_streams:
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         ffmpeg_recoding.extend([f"-c:a:{aindex}", "copy"])
         printlines.append(
@@ -29,7 +29,7 @@ def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, ar
         )
     obj = stream.to_dict()
     obj["newindex"] = aindex
-    obj["recoding"] = recode 
+    obj["recoding"] = recode
     astreams.append(obj)
 
     if stream.tags.language in ["eng", "und", "jpn", None, lang]:
@@ -73,11 +73,12 @@ def audio(
     dispositions: dict[str, Dispositions],
     changealang: list,
     lang: str = "eng",
+    copy_streams: bool = False,
 ):
     if stream.tags is None:
         stream.tags = StreamTags()
     if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None, lang]:
-        arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang)
+        arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang, copy_streams)
         dispositiontypes = [dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]]
         dispositions["a" + str(aindex)] = Dispositions(
             stype="a",
