@@ -51,6 +51,7 @@ def parse_args() -> argparse.Namespace:
             "mul",
             "rus",
             "spa",
+            "mar",
         ],
         default="eng",
         dest="lang",
