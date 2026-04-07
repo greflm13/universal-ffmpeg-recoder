@@ -45,7 +45,7 @@ def api_login(config: str) -> APITokens:
         if os.name == "posix":
             os.mknod(config)
         else:
-            with open(config, "w") as f:
+            with open(config, "w"):
                 pass
 
     conf = configparser.ConfigParser()
