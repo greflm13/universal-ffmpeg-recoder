@@ -42,7 +42,11 @@ def api_login(config: str) -> APITokens:
     logger.info("Starting API login")
     if not os.path.exists(config):
         logger.info("Creating config file", extra={"path": config})
-        os.mknod(config)
+        if os.name == "posix":
+            os.mknod(config)
+        else:
+            with open(config, "w") as f:
+                pass
 
     conf = configparser.ConfigParser()
     conf.read(config)
