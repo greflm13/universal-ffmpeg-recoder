@@ -155,7 +155,7 @@ jobs:
       - name: Build package
         shell: bash
         run: |
-          pyinstaller builder.py modules/*.py \
+          pyinstaller recode.py modules/*.py \
             -n ${{ needs.version.outputs.name }}-${{ matrix.os }}-${{ matrix.arch }} \
             -F
 

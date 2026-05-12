@@ -5,7 +5,9 @@
     }
   ],
   "settings": {
-    "black-formatter.args": ["-l 240"],
+    "black-formatter.args": [
+      "-l 240"
+    ],
     "ruff.lineLength": 240,
     "python-envs.pythonProjects": [
       {
@@ -14,7 +16,10 @@
         "packageManager": "ms-python.python:pip"
       }
     ],
-    "python.analysis.typeCheckingMode": "standard"
+    "python.analysis.typeCheckingMode": "standard",
+    "evenBetterToml.schema.associations": {
+      "**/pyproject.toml": "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/pyproject.json"
+    },
   },
   "launch": {
     "version": "0.2.0",
@@ -25,7 +30,14 @@
         "request": "launch",
         "program": "${workspaceFolder}/recode.py",
         "console": "integratedTerminal",
-        "args": ["-t", "film", "-l", "ger", "-i", "Das.Geheimnis.der.Mondprinzessin.German.2008.DVDRip.XviD-ViDEOWELT.avi"],
+        "args": [
+          "-t",
+          "film",
+          "-l",
+          "ger",
+          "-i",
+          "Das.Geheimnis.der.Mondprinzessin.German.2008.DVDRip.XviD-ViDEOWELT.avi"
+        ],
         "cwd": "/home/user/Videos"
       },
       {
@@ -40,5 +52,9 @@
     ],
     "compounds": []
   },
-  "extensions": { "recommendations": ["charliermarsh.ruff"] }
+  "extensions": {
+    "recommendations": [
+      "charliermarsh.ruff"
+    ]
+  }
 }
