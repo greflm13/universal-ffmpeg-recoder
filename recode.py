@@ -8,6 +8,7 @@ import tempfile
 import argparse
 
 from typing import Optional
+from importlib.metadata import version, PackageNotFoundError
 
 from colorama import init as colorama_init
 from colorama import Fore as Color
@@ -30,6 +31,14 @@ elif os.path.exists("/usr/lib/libcuda.so"):
     HWACC = "CUDA"
 else:
     HWACC = None
+SCRIPTDIR = os.path.dirname(os.path.realpath(__file__)).removesuffix(__package__ if __package__ else "")
+
+try:
+    __version__ = version("StaticGalleryBuilder")
+except PackageNotFoundError:
+    import tomllib
+
+    __version__ = tomllib.loads(open(os.path.join(SCRIPTDIR, "pyproject.toml"), "r").read())["project"]["version"]
 
 
 def parse_args() -> argparse.Namespace:
@@ -65,6 +74,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265", "av1"], dest="codec", metavar="CODEC", default="av1")
     parser.add_argument("-b", "--bit", help="Select bit depth", required=False, choices=["8", "10"], dest="bit", metavar="BIT", default="10")
     parser.add_argument("-o", "--output", help="Output folder", required=False, default="", dest="output", metavar="DIR", type=str)
+    parser.add_argument("-V", "--version", action="version", version="%(prog)s-" + __version__)
     parser.add_argument("--copy", help="Don't recode video streams, just copy them", required=False, action="store_true", dest="copy")
     parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
     parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=["eng", "deu"], dest="infolang")
