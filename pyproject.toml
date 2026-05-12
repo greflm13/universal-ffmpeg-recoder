@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "universal-ffmpeg-recoder"
-version = "1.0.0"
+version = "1.0.1"
 description = "Python script to recode film and tv-show library to the same codecs and file naming convention"
 readme = "README.md"
 requires-python = ">=3.12"
