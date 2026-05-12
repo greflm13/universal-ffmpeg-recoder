@@ -157,7 +157,8 @@ jobs:
         run: |
           pyinstaller recode.py modules/*.py \
             -n ${{ needs.version.outputs.name }}-${{ matrix.os }}-${{ matrix.arch }} \
-            -F
+            -F \
+            --add-data languages.json:.
 
       - name: Upload asset to GitHub Release
         uses: softprops/action-gh-release@v3

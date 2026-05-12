@@ -3,6 +3,7 @@
 import os
 import re
 import sys
+import json
 import shutil
 import tempfile
 import argparse
@@ -20,7 +21,7 @@ from modules.api import api_login, change_episode_number, change_season_type, ge
 from modules.video import video
 from modules.audio import audio, recode_audio
 from modules.subs import subtitles
-from modules.ffmpeg import probe, ffrecode
+from modules.ffmpeg_utils import probe, ffrecode
 from modules.logger import logger
 
 colorama_init()
@@ -34,7 +35,7 @@ else:
 SCRIPTDIR = os.path.dirname(os.path.realpath(__file__)).removesuffix(__package__ if __package__ else "")
 
 try:
-    __version__ = version("StaticGalleryBuilder")
+    __version__ = version("universal-ffmpeg-recoder")
 except PackageNotFoundError:
     import tomllib
 
@@ -42,30 +43,10 @@ except PackageNotFoundError:
 
 
 def parse_args() -> argparse.Namespace:
+    with open(os.path.join(SCRIPTDIR, "languages.json"), "r") as f:
+        languages = json.loads(f.read())
     parser = argparse.ArgumentParser(description="Recode media to common format", formatter_class=RichHelpFormatter)
-    parser.add_argument(
-        "-l",
-        "--lang",
-        help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language",
-        choices=[
-            "ara",
-            "chi",
-            "deu",
-            "eng",
-            "fin",
-            "fre",
-            "ger",
-            "jpn",
-            "kor",
-            "mul",
-            "rus",
-            "spa",
-            "mar",
-        ],
-        default="eng",
-        dest="lang",
-        metavar="LANG",
-    )
+    parser.add_argument("-l", "--lang", help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language", choices=languages, default="eng", dest="lang", metavar="LANG")
     parser.add_argument("-i", "--input", help="File to recode", type=str, required=False, dest="inputfile", metavar="FILE")
     parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIR")
     parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename", "seriesdir", "changeSeasonType"], required=True, dest="contentype", metavar="TYPE")
@@ -77,8 +58,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("-V", "--version", action="version", version="%(prog)s-" + __version__)
     parser.add_argument("--copy", help="Don't recode video streams, just copy them", required=False, action="store_true", dest="copy")
     parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
-    parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=["eng", "deu"], dest="infolang")
-    parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=["eng", "ger"], dest="sublang")
+    parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=languages, dest="infolang", metavar="LANG")
+    parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=languages, dest="sublang", metavar="LANG")
     parser.add_argument("--searchstring", help="Manual search string for TVDB API", required=False, default=None, dest="searchstring", metavar="SEARCHSTRING")
     parser.add_argument("--omit-cover", help="Don't include cover in output file", required=False, action="store_true", dest="omitcover")
     parser.add_argument("--sub-selector", help="Regex to select subtitle stream based on title", required=False, default=None, dest="subselector", metavar="REGEX")
