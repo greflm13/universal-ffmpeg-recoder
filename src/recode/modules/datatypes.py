@@ -1,8 +1,9 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Optional, Any, List, TypeVar, Type, cast, Callable
 from datetime import datetime
-import dateutil.parser
+from typing import Any, TypeVar, cast
 
+import dateutil.parser
 
 T = TypeVar("T")
 
@@ -23,7 +24,7 @@ def from_union(fs, x):
             return f(x)
         except AssertionError:
             pass
-    assert False
+    raise AssertionError()
 
 
 def from_datetime(x: Any) -> datetime:
@@ -41,92 +42,92 @@ def from_bool(x: Any) -> bool:
         return bool(x)
     elif isinstance(x, bool):
         return x
-    assert False
+    raise AssertionError()
 
 
-def to_class(c: Type[T], x: Any) -> dict:
+def to_class[T](c: type[T], x: Any) -> dict:
     assert isinstance(x, c)
     return cast(Any, x).to_dict()
 
 
-def from_list(f: Callable[[Any], T], x: Any) -> List[T]:
+def from_list[T](f: Callable[[Any], T], x: Any) -> list[T]:
     assert isinstance(x, list)
     return [f(y) for y in x]
 
 
 @dataclass
 class FormatTags:
-    empty: Optional[str] = None
-    abj: Optional[str] = None
-    actor: Optional[str] = None
-    artist: Optional[str] = None
-    audiodelay: Optional[str] = None
-    bitrate: Optional[str] = None
-    canseektoend: Optional[str] = None
-    com_android_capture_fps: Optional[str] = None
-    com_android_version: Optional[str] = None
-    com_apple_quicktime_author: Optional[str] = None
-    com_apple_quicktime_description: Optional[str] = None
-    com_apple_quicktime_displayname: Optional[str] = None
-    com_apple_quicktime_keywords: Optional[str] = None
-    com_apple_quicktime_title: Optional[str] = None
-    comment: Optional[str] = None
-    compatible_brands: Optional[str] = None
-    composer: Optional[str] = None
-    contact: Optional[str] = None
-    content_type: Optional[str] = None
-    copyright: Optional[str] = None
-    creation_time: Optional[str] = None
-    creationdate: Optional[str] = None
-    date: Optional[str] = None
-    date_recorded: Optional[str] = None
-    date_release: Optional[str] = None
-    date_released: Optional[str] = None
-    description: Optional[str] = None
-    director: Optional[str] = None
-    encoded_by: Optional[str] = None
-    encoder: Optional[str] = None
-    encoder_eng: Optional[str] = None
-    episode_id: Optional[str] = None
-    episode_sort: Optional[str] = None
-    file: Optional[str] = None
-    filters: Optional[str] = None
-    genre: Optional[str] = None
-    hd_video: Optional[str] = None
-    hw: Optional[str] = None
-    imdb: Optional[str] = None
-    imdb_eng: Optional[str] = None
-    itunmovi: Optional[str] = None
-    keywords: Optional[str] = None
-    location: Optional[str] = None
-    major_brand: Optional[str] = None
-    maxrate: Optional[str] = None
-    media_type: Optional[str] = None
-    minor_version: Optional[str] = None
-    modification_time: Optional[datetime] = None
-    movie_comment: Optional[str] = None
-    movie_encoder: Optional[str] = None
-    producer: Optional[str] = None
-    production_studio: Optional[str] = None
-    publisher: Optional[str] = None
-    purl: Optional[str] = None
-    released_by: Optional[str] = None
-    scene: Optional[str] = None
-    screenplay_by: Optional[str] = None
-    season_number: Optional[str] = None
-    show: Optional[str] = None
-    software: Optional[str] = None
-    synopsis: Optional[str] = None
-    te_is_reencode: Optional[str] = None
-    timecode: Optional[str] = None
-    title: Optional[str] = None
-    tmdb: Optional[str] = None
-    tvdb: Optional[str] = None
-    tvdb2: Optional[str] = None
-    version: Optional[str] = None
-    version_eng: Optional[str] = None
-    writing_frontend: Optional[str] = None
-    written_by: Optional[str] = None
+    empty: str | None = None
+    abj: str | None = None
+    actor: str | None = None
+    artist: str | None = None
+    audiodelay: str | None = None
+    bitrate: str | None = None
+    canseektoend: str | None = None
+    com_android_capture_fps: str | None = None
+    com_android_version: str | None = None
+    com_apple_quicktime_author: str | None = None
+    com_apple_quicktime_description: str | None = None
+    com_apple_quicktime_displayname: str | None = None
+    com_apple_quicktime_keywords: str | None = None
+    com_apple_quicktime_title: str | None = None
+    comment: str | None = None
+    compatible_brands: str | None = None
+    composer: str | None = None
+    contact: str | None = None
+    content_type: str | None = None
+    copyright: str | None = None
+    creation_time: str | None = None
+    creationdate: str | None = None
+    date: str | None = None
+    date_recorded: str | None = None
+    date_release: str | None = None
+    date_released: str | None = None
+    description: str | None = None
+    director: str | None = None
+    encoded_by: str | None = None
+    encoder: str | None = None
+    encoder_eng: str | None = None
+    episode_id: str | None = None
+    episode_sort: str | None = None
+    file: str | None = None
+    filters: str | None = None
+    genre: str | None = None
+    hd_video: str | None = None
+    hw: str | None = None
+    imdb: str | None = None
+    imdb_eng: str | None = None
+    itunmovi: str | None = None
+    keywords: str | None = None
+    location: str | None = None
+    major_brand: str | None = None
+    maxrate: str | None = None
+    media_type: str | None = None
+    minor_version: str | None = None
+    modification_time: datetime | None = None
+    movie_comment: str | None = None
+    movie_encoder: str | None = None
+    producer: str | None = None
+    production_studio: str | None = None
+    publisher: str | None = None
+    purl: str | None = None
+    released_by: str | None = None
+    scene: str | None = None
+    screenplay_by: str | None = None
+    season_number: str | None = None
+    show: str | None = None
+    software: str | None = None
+    synopsis: str | None = None
+    te_is_reencode: str | None = None
+    timecode: str | None = None
+    title: str | None = None
+    tmdb: str | None = None
+    tvdb: str | None = None
+    tvdb2: str | None = None
+    version: str | None = None
+    version_eng: str | None = None
+    writing_frontend: str | None = None
+    written_by: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> "FormatTags":
@@ -434,8 +435,8 @@ class Format:
     nb_streams: int
     probe_score: int
     size: str
-    start_time: Optional[str] = None
-    tags: Optional[FormatTags] = None
+    start_time: str | None = None
+    tags: FormatTags | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> "Format":
@@ -499,12 +500,12 @@ class Disposition:
     original: bool
     timed_thumbnails: bool
     visual_impaired: bool
-    captions: Optional[bool] = None
-    dependent: Optional[bool] = None
-    descriptions: Optional[bool] = None
-    metadata: Optional[bool] = None
-    non_diegetic: Optional[bool] = None
-    still_image: Optional[bool] = None
+    captions: bool | None = None
+    dependent: bool | None = None
+    descriptions: bool | None = None
+    metadata: bool | None = None
+    non_diegetic: bool | None = None
+    still_image: bool | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> "Disposition":
@@ -580,32 +581,32 @@ class Disposition:
 @dataclass
 class SideDataList:
     side_data_type: str
-    avg_bitrate: Optional[int] = None
-    blue_x: Optional[str] = None
-    blue_y: Optional[str] = None
-    buffer_size: Optional[int] = None
-    displaymatrix: Optional[str] = None
-    green_x: Optional[str] = None
-    green_y: Optional[str] = None
-    inverted: Optional[int] = None
-    max_average: Optional[int] = None
-    max_bitrate: Optional[int] = None
-    max_content: Optional[int] = None
-    max_luminance: Optional[str] = None
-    min_bitrate: Optional[int] = None
-    min_luminance: Optional[str] = None
-    pitch: Optional[int] = None
-    projection: Optional[str] = None
-    red_x: Optional[str] = None
-    red_y: Optional[str] = None
-    roll: Optional[int] = None
-    rotation: Optional[int] = None
-    service_type: Optional[int] = None
-    type: Optional[str] = None
-    vbv_delay: Optional[int] = None
-    white_point_x: Optional[str] = None
-    white_point_y: Optional[str] = None
-    yaw: Optional[int] = None
+    avg_bitrate: int | None = None
+    blue_x: str | None = None
+    blue_y: str | None = None
+    buffer_size: int | None = None
+    displaymatrix: str | None = None
+    green_x: str | None = None
+    green_y: str | None = None
+    inverted: int | None = None
+    max_average: int | None = None
+    max_bitrate: int | None = None
+    max_content: int | None = None
+    max_luminance: str | None = None
+    min_bitrate: int | None = None
+    min_luminance: str | None = None
+    pitch: int | None = None
+    projection: str | None = None
+    red_x: str | None = None
+    red_y: str | None = None
+    roll: int | None = None
+    rotation: int | None = None
+    service_type: int | None = None
+    type: str | None = None
+    vbv_delay: int | None = None
+    white_point_x: str | None = None
+    white_point_y: str | None = None
+    yaw: int | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> "SideDataList":
@@ -727,35 +728,35 @@ class SideDataList:
 
 @dataclass
 class StreamTags:
-    statistics_tags: Optional[str] = None
-    statistics_tags_eng: Optional[str] = None
-    statistics_writing_app: Optional[str] = None
-    statistics_writing_app_eng: Optional[str] = None
-    statistics_writing_date_utc: Optional[str] = None
-    statistics_writing_date_utc_eng: Optional[str] = None
-    alpha_mode: Optional[str] = None
-    bps: Optional[str] = None
-    bps_eng: Optional[str] = None
-    creation_time: Optional[datetime] = None
-    duration: Optional[str] = None
-    duration_eng: Optional[str] = None
-    encoder: Optional[str] = None
-    encoder_options: Optional[str] = None
-    filename: Optional[str] = None
-    handler_name: Optional[str] = None
-    language: Optional[str] = None
-    mimetype: Optional[str] = None
-    number_of_bytes: Optional[str] = None
-    number_of_bytes_eng: Optional[str] = None
-    number_of_frames: Optional[str] = None
-    number_of_frames_eng: Optional[str] = None
-    source: Optional[str] = None
-    source_id: Optional[str] = None
-    source_id_eng: Optional[str] = None
-    timecode: Optional[str] = None
-    title: Optional[str] = None
-    track: Optional[str] = None
-    vendor_id: Optional[str] = None
+    statistics_tags: str | None = None
+    statistics_tags_eng: str | None = None
+    statistics_writing_app: str | None = None
+    statistics_writing_app_eng: str | None = None
+    statistics_writing_date_utc: str | None = None
+    statistics_writing_date_utc_eng: str | None = None
+    alpha_mode: str | None = None
+    bps: str | None = None
+    bps_eng: str | None = None
+    creation_time: datetime | None = None
+    duration: str | None = None
+    duration_eng: str | None = None
+    encoder: str | None = None
+    encoder_options: str | None = None
+    filename: str | None = None
+    handler_name: str | None = None
+    language: str | None = None
+    mimetype: str | None = None
+    number_of_bytes: str | None = None
+    number_of_bytes_eng: str | None = None
+    number_of_frames: str | None = None
+    number_of_frames_eng: str | None = None
+    source: str | None = None
+    source_id: str | None = None
+    source_id_eng: str | None = None
+    timecode: str | None = None
+    title: str | None = None
+    track: str | None = None
+    vendor_id: str | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> "StreamTags":
@@ -894,54 +895,54 @@ class Stream:
     index: int
     r_frame_rate: str
     time_base: str
-    bit_rate: Optional[str] = None
-    bits_per_raw_sample: Optional[str] = None
-    bits_per_sample: Optional[int] = None
-    channel_layout: Optional[str] = None
-    channels: Optional[int] = None
-    chroma_location: Optional[str] = None
-    closed_captions: Optional[int] = None
-    codec_long_name: Optional[str] = None
-    codec_name: Optional[str] = None
-    coded_height: Optional[int] = None
-    coded_width: Optional[int] = None
-    color_primaries: Optional[str] = None
-    color_range: Optional[str] = None
-    color_space: Optional[str] = None
-    color_transfer: Optional[str] = None
-    display_aspect_ratio: Optional[str] = None
-    divx_packed: Optional[str] = None
-    dmix_mode: Optional[str] = None
-    duration: Optional[str] = None
-    duration_ts: Optional[int] = None
-    extradata_size: Optional[int] = None
-    field_order: Optional[str] = None
-    film_grain: Optional[int] = None
-    has_b_frames: Optional[int] = None
-    height: Optional[int] = None
-    id: Optional[str] = None
-    initial_padding: Optional[int] = None
-    is_avc: Optional[str] = None
-    level: Optional[int] = None
-    loro_cmixlev: Optional[str] = None
-    loro_surmixlev: Optional[str] = None
-    ltrt_cmixlev: Optional[str] = None
-    ltrt_surmixlev: Optional[str] = None
-    missing_streams: Optional[str] = None
-    nal_length_size: Optional[str] = None
-    nb_frames: Optional[str] = None
-    pix_fmt: Optional[str] = None
-    profile: Optional[str] = None
-    quarter_sample: Optional[str] = None
-    refs: Optional[int] = None
-    sample_aspect_ratio: Optional[str] = None
-    sample_fmt: Optional[str] = None
-    sample_rate: Optional[str] = None
-    side_data_list: Optional[List[SideDataList]] = None
-    start_pts: Optional[int] = None
-    start_time: Optional[str] = None
-    tags: Optional[StreamTags] = None
-    width: Optional[int] = None
+    bit_rate: str | None = None
+    bits_per_raw_sample: str | None = None
+    bits_per_sample: int | None = None
+    channel_layout: str | None = None
+    channels: int | None = None
+    chroma_location: str | None = None
+    closed_captions: int | None = None
+    codec_long_name: str | None = None
+    codec_name: str | None = None
+    coded_height: int | None = None
+    coded_width: int | None = None
+    color_primaries: str | None = None
+    color_range: str | None = None
+    color_space: str | None = None
+    color_transfer: str | None = None
+    display_aspect_ratio: str | None = None
+    divx_packed: str | None = None
+    dmix_mode: str | None = None
+    duration: str | None = None
+    duration_ts: int | None = None
+    extradata_size: int | None = None
+    field_order: str | None = None
+    film_grain: int | None = None
+    has_b_frames: int | None = None
+    height: int | None = None
+    id: str | None = None
+    initial_padding: int | None = None
+    is_avc: str | None = None
+    level: int | None = None
+    loro_cmixlev: str | None = None
+    loro_surmixlev: str | None = None
+    ltrt_cmixlev: str | None = None
+    ltrt_surmixlev: str | None = None
+    missing_streams: str | None = None
+    nal_length_size: str | None = None
+    nb_frames: str | None = None
+    pix_fmt: str | None = None
+    profile: str | None = None
+    quarter_sample: str | None = None
+    refs: int | None = None
+    sample_aspect_ratio: str | None = None
+    sample_fmt: str | None = None
+    sample_rate: str | None = None
+    side_data_list: list[SideDataList] | None = None
+    start_pts: int | None = None
+    start_time: str | None = None
+    tags: StreamTags | None = None
+    width: int | None = None
 
     @staticmethod
     def from_dict(obj: Any) -> "Stream":
@@ -1182,7 +1183,7 @@ class Stream:
 @dataclass
 class Ffprobe:
     format: Format
-    streams: List[Stream]
+    streams: list[Stream]
 
     @staticmethod
     def from_dict(obj: Any) -> "Ffprobe":
@@ -1205,10 +1206,11 @@ def f_fprobe_from_dict(s: Any) -> Ffprobe:
 def f_fprobe_to_dict(x: Ffprobe) -> Any:
     return to_class(Ffprobe, x)
 
+
 @dataclass
 class Dispositions:
     stype: str
     index: int
-    title: Optional[str] = None
-    lang: Optional[str] = None
-    types: List[str] = field(default_factory=list)
+    title: str | None = None
+    lang: str | None = None
+    types: list[str] = field(default_factory=list)

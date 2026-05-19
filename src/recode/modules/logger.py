@@ -12,18 +12,22 @@ Functions:
 - setup_consolelogger(): Configures the logging system to output logs in console format.
 """
 
-import os
-import json
 import gzip
-import shutil
+import json
 import logging
+import os
+import shutil
+import sys
 from datetime import datetime
+from pathlib import Path
+
 from pythonjsonlogger import jsonlogger
 
 # Constants for file paths and exclusions
-SCRIPTDIR = os.path.dirname(os.path.realpath(__file__)).removesuffix(__package__ if __package__ else "")
-LOG_DIR = os.path.join(SCRIPTDIR, "logs")
-LATEST_LOG_FILE = os.path.join(LOG_DIR, "latest.jsonl")
+SCRIPTDIR = Path(sys.executable).parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parent
+LOG_DIR = SCRIPTDIR / "logs"
+LATEST_LOG_FILE = LOG_DIR / "latest.jsonl"
+
 
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR)
@@ -91,7 +95,23 @@ def setup_logger(level=logging.INFO):
     """
     _logger = logging.getLogger(name="defaultlogger")
 
-    supported_keys = ["asctime", "created", "filename", "funcName", "levelname", "levelno", "lineno", "module", "msecs", "message", "process", "processName", "relativeCreated", "thread", "threadName"]
+    supported_keys = [
+        "asctime",
+        "created",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "module",
+        "msecs",
+        "message",
+        "process",
+        "processName",
+        "relativeCreated",
+        "thread",
+        "threadName",
+    ]
 
     custom_format = " ".join(log_format(supported_keys))
     formatter = jsonlogger.JsonFormatter(custom_format)
@@ -117,7 +137,23 @@ def setup_consolelogger(level=logging.INFO):
     """
     _logger = logging.getLogger(name="consolelogger")
 
-    supported_keys = ["asctime", "created", "filename", "funcName", "levelname", "levelno", "lineno", "module", "msecs", "message", "process", "processName", "relativeCreated", "thread", "threadName"]
+    supported_keys = [
+        "asctime",
+        "created",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "module",
+        "msecs",
+        "message",
+        "process",
+        "processName",
+        "relativeCreated",
+        "thread",
+        "threadName",
+    ]
 
     custom_format = " ".join(log_format(supported_keys))
     formatter = jsonlogger.JsonFormatter(custom_format)

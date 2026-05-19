@@ -1,12 +1,27 @@
 from colorama import Fore as Color
 from colorama import Style
 
-from modules.datatypes import Stream, StreamTags, Dispositions
-from modules.logger import logger
+from recode.modules.datatypes import Dispositions, Stream, StreamTags
+from recode.modules.logger import logger
 
 
-def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding: bool, vindex: int, printlines: list, dispositions: dict[str, Dispositions], hwacc: str | None, codec="av1", bit=10, copy=False):
-    logger.info("Processing video stream", extra={"index": stream.index, "codec": stream.codec_name, "pix_fmt": stream.pix_fmt, "bit_depth": bit, "target_codec": codec})
+def video(
+    stream: Stream,
+    ffmpeg_mapping: list,
+    ffmpeg_recoding: list,
+    vrecoding: bool,
+    vindex: int,
+    printlines: list,
+    dispositions: dict[str, Dispositions],
+    hwacc: str | None,
+    codec="av1",
+    bit=10,
+    copy=False,
+):
+    logger.info(
+        "Processing video stream",
+        extra={"index": stream.index, "codec": stream.codec_name, "pix_fmt": stream.pix_fmt, "bit_depth": bit, "target_codec": codec},
+    )
     codecd = {"name": "av1", "swenc": "libsvtav1", "amdenc": "av1_amf", "nvdenc": "av1_nvenc"}
     if codec == "av1":
         codecd = {"name": "av1", "swenc": "libsvtav1", "amdenc": "av1_amf", "nvdenc": "av1_nvenc"}
@@ -16,7 +31,11 @@ def video(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, vrecoding
         codecd = {"name": "h264", "swenc": "libx264", "amdenc": "h264_amf", "nvdenc": "h264_nvenc"}
     if stream.tags is None:
         stream.tags = StreamTags(title=None)
-    if not copy and (stream.codec_name != codecd["name"] or (bit == 8 and stream.pix_fmt != "yuv420p")) and not stream.disposition.attached_pic:
+    if (
+        not copy
+        and (stream.codec_name != codecd["name"] or (bit == 8 and stream.pix_fmt != "yuv420p"))
+        and not stream.disposition.attached_pic
+    ):
         logger.info("Setting up video recoding", extra={"hwaccel": hwacc, "target_codec": codecd["name"]})
         ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
         if hwacc == "AMF":

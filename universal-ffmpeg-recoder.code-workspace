@@ -5,10 +5,7 @@
     }
   ],
   "settings": {
-    "black-formatter.args": [
-      "-l 240"
-    ],
-    "ruff.lineLength": 240,
+    "ruff.lineLength": 140,
     "python-envs.pythonProjects": [
       {
         "path": "",

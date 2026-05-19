@@ -1,11 +1,10 @@
-import os
-import zlib
 import base64
-import struct
 import hashlib
-
-from warnings import warn
+import os
+import struct
+import zlib
 from platform import python_version_tuple
+from warnings import warn
 
 try:
     if int(python_version_tuple()[0]) < 3:
@@ -18,7 +17,10 @@ except ImportError:
         try:
             from chardet import detect
 
-            warn("python chardet is installed but could be unreliable, upgrade to python 3 and install charset-normalizer or cchardet.")
+            warn(
+                "python chardet is installed but could be unreliable, upgrade to python 3 and install charset-normalizer or cchardet.",
+                stacklevel=2,
+            )
         except ImportError:
 
             def detect(bytes_str):
@@ -59,7 +61,7 @@ def get_md5(file_path):
         return hashlib.md5(f.read()).hexdigest()
 
 
-class File(object):
+class File:
     def __init__(self, path):
         self.path = path
         self.size = str(os.path.getsize(path))
@@ -71,7 +73,7 @@ class File(object):
 
         try:
             f = open(self.path, "rb")
-        except IOError:
+        except OSError:
             return "IOError"
 
         hash = int(self.size)
@@ -93,5 +95,5 @@ class File(object):
             hash = hash & 0xFFFFFFFFFFFFFFFF
 
         f.close()
-        returnedhash = "%016x" % hash
+        returnedhash = f"{hash:016x}"
         return str(returnedhash)

@@ -1,22 +1,50 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
-build-backend = "setuptools.build_meta"
+    build-backend = "setuptools.build_meta"
+    requires      = ["setuptools>=61", "wheel"]
 
 [project]
-name = "universal-ffmpeg-recoder"
-version = "1.0.2"
-description = "Python script to recode film and tv-show library to the same codecs and file naming convention"
-readme = "README.md"
-requires-python = ">=3.12"
+    description     = "Python script to recode film and tv-show library to the same codecs and file naming convention"
+    name            = "universal-ffmpeg-recoder"
+    readme          = "README.md"
+    requires-python = ">=3.12"
+    version         = "1.0.2"
 
-license = "AGPL-3.0-or-later"
+    license = "AGPL-3.0-or-later"
 
-authors = [{ name = "Flo Greistorfer" }]
+    authors = [{ name = "Flo Greistorfer" }]
 
-dependencies = ["colorama~=0.4.6", "genson~=1.3.0", "json_to_models~=0.0.4", "python_dateutil~=2.9.0.post0", "python_json_logger~=4.0.0", "python-ffmpeg~=2.0.11", "questionary~=2.1.1", "Requests~=2.32.3", "rich_argparse~=1.7.1"]
+    dependencies = [
+        "Requests~=2.32.3",
+        "colorama~=0.4.6",
+        "genson~=1.3.0",
+        "json_to_models~=0.0.4",
+        "python-ffmpeg~=2.0.11",
+        "python_dateutil~=2.9.0.post0",
+        "python_json_logger~=4.0.0",
+        "questionary~=2.1.1",
+        "rich_argparse~=1.7.1",
+    ]
+
+    [project.scripts]
+        recode = "recode.main:main"
 
 [dependency-groups]
-dev = ["ruff"]
+    dev = ["pyinstaller", "ruff"]
 
-[tool.setuptools]
-packages = []
+[tool.setuptools.packages.find]
+    where = ["src"]
+
+[tool.setuptools.package-data]
+    recode = ["languages.json"]
+
+[tool.ruff]
+    line-length    = 140
+    target-version = "py312"
+
+    [tool.ruff.lint]
+        ignore = ["E501"]
+        select = ["B", "E", "F", "I", "UP"]
+
+    [tool.ruff.format]
+        indent-style = "space"
+        quote-style  = "double"

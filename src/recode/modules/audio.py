@@ -1,13 +1,24 @@
 from colorama import Fore as Color
 from colorama import Style
 
-from modules.datatypes import Stream, StreamTags, Dispositions
-from modules.logger import logger
+from recode.modules.datatypes import Dispositions, Stream, StreamTags
+from recode.modules.logger import logger
 
 AUDIO_PRIORITY = {"dts": 6, "flac": 5, "opus": 4, "truehd": 3, "eac3": 2}
 
 
-def recode_audio(stream: Stream, ffmpeg_mapping: list, ffmpeg_recoding: list, arecoding: bool, aindex: int, adefault: dict, astreams: list, printlines: list, lang: str = "eng", copy_streams: bool = False):
+def recode_audio(
+    stream: Stream,
+    ffmpeg_mapping: list,
+    ffmpeg_recoding: list,
+    arecoding: bool,
+    aindex: int,
+    adefault: dict,
+    astreams: list,
+    printlines: list,
+    lang: str = "eng",
+    copy_streams: bool = False,
+):
     if stream.tags is None:
         stream.tags = StreamTags()
     logger.info("Processing audio stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language})
@@ -46,7 +57,11 @@ def update_audio_default(adefault: dict, stream: Stream, aindex: int, lang: str 
     logger.info("Updating audio default", extra={"stream_index": aindex, "language": stream.tags.language, "codec": stream.codec_name})
     if (
         (stream.channels > adefault["channels"] and stream.tags.language == lang)
-        or (AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0) and stream.channels == adefault["channels"] and stream.tags.language == lang)
+        or (
+            AUDIO_PRIORITY.get(stream.codec_name, 0) > AUDIO_PRIORITY.get(adefault["codec"], 0)
+            and stream.channels == adefault["channels"]
+            and stream.tags.language == lang
+        )
         or (adefault["lang"] != lang and stream.tags.language == lang)
     ):
         adefault.update(
@@ -78,7 +93,9 @@ def audio(
     if stream.tags is None:
         stream.tags = StreamTags()
     if stream.tags.language in ["eng", "ger", "deu", "jpn", "und", None, lang]:
-        arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang, copy_streams)
+        arecoding = recode_audio(
+            stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, lang, copy_streams
+        )
         dispositiontypes = [dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]]
         dispositions["a" + str(aindex)] = Dispositions(
             stype="a",

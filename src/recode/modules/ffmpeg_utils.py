@@ -1,12 +1,13 @@
-import json
 import datetime
+import json
 import os
 
-from colorama import Fore as Color, Style
+from colorama import Fore as Color
+from colorama import Style
 from ffmpeg import FFmpeg, Progress, errors
 
-from modules.datatypes import Ffprobe
-from modules.logger import logger
+from recode.modules.datatypes import Ffprobe
+from recode.modules.logger import logger
 
 
 def list_to_dict(lst: list) -> dict:
@@ -82,11 +83,21 @@ def probe(file_path: str) -> Ffprobe:
         dict: A dictionary containing the metadata of the media file.
     """
     logger.info("Probing media file", extra={"file": file_path})
-    ffprobe = FFmpeg(executable="ffprobe").input(file_path, print_format="json", show_streams=None, show_format=None, strict="-2", v="error")
+    ffprobe = FFmpeg(executable="ffprobe").input(
+        file_path, print_format="json", show_streams=None, show_format=None, strict="-2", v="error"
+    )
     return Ffprobe.from_dict(rename_keys_to_lower(json.loads(ffprobe.execute())))
 
 
-def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_recoding: list, ffmpeg_dispositions: list, ffmpeg_metadata: list, additional_files: list | None = None) -> bool:
+def ffrecode(
+    input_file: str,
+    output_file: str,
+    ffmpeg_mapping: list,
+    ffmpeg_recoding: list,
+    ffmpeg_dispositions: list,
+    ffmpeg_metadata: list,
+    additional_files: list | None = None,
+) -> bool:
     """
     Re-encodes a media file using ffmpeg with the specified arguments.
 
@@ -107,7 +118,15 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
     ffmpeg_args = list_to_dict(ffmpeg_recoding + ffmpeg_dispositions)
     mapping = maplist(ffmpeg_mapping)
     metadata = maplist(ffmpeg_metadata)
-    ffmpeg = FFmpeg(executable="ffmpeg").option("y").option("hwaccel", "auto").option("strict", "-2").option("v", "error").option("stats").input(input_file)
+    ffmpeg = (
+        FFmpeg(executable="ffmpeg")
+        .option("y")
+        .option("hwaccel", "auto")
+        .option("strict", "-2")
+        .option("v", "error")
+        .option("stats")
+        .input(input_file)
+    )
     if additional_files:
         logger.info("Adding additional files", extra={"count": len(additional_files)})
         for file in additional_files:
@@ -122,10 +141,16 @@ def ffrecode(input_file: str, output_file: str, ffmpeg_mapping: list, ffmpeg_rec
 
     @ffmpeg.on("progress")
     def on_progress(progress: Progress):
-        logger.debug("FFmpeg progress", extra={"frame": progress.frame, "fps": int(progress.fps), "time": format_timedelta(progress.time), "speed": progress.speed})
+        logger.debug(
+            "FFmpeg progress",
+            extra={"frame": progress.frame, "fps": int(progress.fps), "time": format_timedelta(progress.time), "speed": progress.speed},
+        )
         termwidth = os.get_terminal_size().columns
         print("\r" + " " * termwidth, end="\r")
-        print(f"frame={progress.frame} fps={int(progress.fps)} size={human_readable_size(progress.size)} time={format_timedelta(progress.time)} bitrate={human_readable_size(progress.bitrate)}/s speed={progress.speed}x", end="\r")
+        print(
+            f"frame={progress.frame} fps={int(progress.fps)} size={human_readable_size(progress.size)} time={format_timedelta(progress.time)} bitrate={human_readable_size(progress.bitrate)}/s speed={progress.speed}x",
+            end="\r",
+        )
 
     @ffmpeg.on("completed")
     def on_completed():

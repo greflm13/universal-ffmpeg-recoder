@@ -2,27 +2,32 @@
 
 import os
 import re
-import sys
-import json
 import shutil
+import sys
 import tempfile
-import argparse
 
-from typing import Optional
-from importlib.metadata import version, PackageNotFoundError
-
-from colorama import init as colorama_init
 from colorama import Fore as Color
 from colorama import Style
-from rich_argparse import RichHelpFormatter
+from colorama import init as colorama_init
 
-from modules.datatypes import StreamTags, Stream, Dispositions
-from modules.api import api_login, change_episode_number, change_season_type, get_episode, get_movie_name, get_series_from_tvdb, get_subtitles_from_ost, logout, APITokens
-from modules.video import video
-from modules.audio import audio, recode_audio
-from modules.subs import subtitles
-from modules.ffmpeg_utils import probe, ffrecode
-from modules.logger import logger
+from recode.modules.api import (
+    APITokens,
+    api_login,
+    change_episode_number,
+    change_season_type,
+    get_episode,
+    get_movie_name,
+    get_series_from_tvdb,
+    get_subtitles_from_ost,
+    logout,
+)
+from recode.modules.audio import audio, recode_audio
+from recode.modules.datatypes import Dispositions, Stream, StreamTags
+from recode.modules.ffmpeg_utils import ffrecode, probe
+from recode.modules.logger import logger
+from recode.modules.parse_arguments import parse_args
+from recode.modules.subs import subtitles
+from recode.modules.video import video
 
 colorama_init()
 
@@ -32,39 +37,6 @@ elif os.path.exists("/usr/lib/libcuda.so"):
     HWACC = "CUDA"
 else:
     HWACC = None
-SCRIPTDIR = os.path.dirname(os.path.realpath(__file__)).removesuffix(__package__ if __package__ else "")
-
-try:
-    __version__ = version("universal-ffmpeg-recoder")
-except PackageNotFoundError:
-    import tomllib
-
-    __version__ = tomllib.loads(open(os.path.join(SCRIPTDIR, "pyproject.toml"), "r").read())["project"]["version"]
-
-
-def parse_args() -> argparse.Namespace:
-    with open(os.path.join(SCRIPTDIR, "languages.json"), "r") as f:
-        languages = json.loads(f.read())
-    parser = argparse.ArgumentParser(description="Recode media to common format", formatter_class=RichHelpFormatter)
-    parser.add_argument("-l", "--lang", help="Language of content, sets audio and subtitle language if undefined and tries to get information in specified language", choices=languages, default="eng", dest="lang", metavar="LANG")
-    parser.add_argument("-i", "--input", help="File to recode", type=str, required=False, dest="inputfile", metavar="FILE")
-    parser.add_argument("-d", "--dir", help="Directory containing files to recode", type=str, required=False, dest="inputdir", metavar="DIR")
-    parser.add_argument("-t", "--type", help="Type of content", choices=["film", "series", "rename", "seriesdir", "changeSeasonType"], required=True, dest="contentype", metavar="TYPE")
-    parser.add_argument("-a", "--no-api", help="Disable Metadata and Subtitle APIs", default=False, action="store_true", dest="apis")
-    parser.add_argument("-s", "--subtitle", help="Directory containing Subtitles", required=False, default="", dest="subdir", metavar="DIR")
-    parser.add_argument("-c", "--codec", help="Select codec", required=False, choices=["h264", "h265", "av1"], dest="codec", metavar="CODEC", default="av1")
-    parser.add_argument("-b", "--bit", help="Select bit depth", required=False, choices=["8", "10"], dest="bit", metavar="BIT", default="10")
-    parser.add_argument("-o", "--output", help="Output folder", required=False, default="", dest="output", metavar="DIR", type=str)
-    parser.add_argument("-V", "--version", action="version", version="%(prog)s-" + __version__)
-    parser.add_argument("--copy", help="Don't recode video streams, just copy them", required=False, action="store_true", dest="copy")
-    parser.add_argument("--hwaccel", help="Enable Hardware Acceleration (faster but larger files)", required=False, action="store_true", dest="hwaccel")
-    parser.add_argument("--infolang", help="Language the info shall be retrieved in (defaults to --lang)", required=False, default=None, choices=languages, dest="infolang", metavar="LANG")
-    parser.add_argument("--sublang", help="Language the default subtitle should be (defaults to --lang)", required=False, default=None, choices=languages, dest="sublang", metavar="LANG")
-    parser.add_argument("--searchstring", help="Manual search string for TVDB API", required=False, default=None, dest="searchstring", metavar="SEARCHSTRING")
-    parser.add_argument("--omit-cover", help="Don't include cover in output file", required=False, action="store_true", dest="omitcover")
-    parser.add_argument("--sub-selector", help="Regex to select subtitle stream based on title", required=False, default=None, dest="subselector", metavar="REGEX")
-    parser.add_argument("--metadata-only", help="Only change metadata, copy streams", required=False, action="store_true", dest="onlymetadata")
-    return parser.parse_args()
 
 
 def recode_series(
@@ -81,7 +53,7 @@ def recode_series(
     copy: bool = False,
     searchstring: str | None = None,
     omit_cover: bool = False,
-    subselector: Optional[str] = None,
+    subselector: str | None = None,
     copy_streams: bool = False,
 ):
     logger.info("Starting series recode process", extra={"folder": folder})
@@ -156,9 +128,9 @@ def recode(
     lang: str,
     infolang: str,
     sublang: str,
-    path: Optional[str] = None,
-    metadata: Optional[dict] = None,
-    apitokens: Optional[APITokens] = None,
+    path: str | None = None,
+    metadata: dict | None = None,
+    apitokens: APITokens | None = None,
     *,
     subdir: str = "",
     codec: str = "h265",
@@ -168,7 +140,7 @@ def recode(
     copy: bool = False,
     searchstring: str | None = None,
     omit_cover: bool = False,
-    subselector: Optional[str] = None,
+    subselector: str | None = None,
     copy_streams: bool = False,
 ):
     logger.info("Recode parameters", extra={"codec": codec, "bit": bit, "type": stype, "copy": copy, "omit_cover": omit_cover})
@@ -233,7 +205,9 @@ def recode(
     output_file = output_file.replace("?", "")
     logger.info("Recoding file", extra={"input": os.path.realpath(file), "output": os.path.realpath(output_file)})
 
-    prelines.append(f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
+    prelines.append(
+        f"{Color.RED}Recoding{Style.RESET_ALL} {Color.YELLOW}{os.path.realpath(file)}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}"
+    )
 
     ffprobe = probe(os.path.realpath(file))
 
@@ -275,21 +249,50 @@ def recode(
 
     for stream in videostreams:
         logger.info("Processing video stream", extra={"index": stream.index, "codec": stream.codec_name})
-        vrecoding, vindex, pix_fmt = video(stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, dispositions, HWACC, codec, bit, copy)
+        vrecoding, vindex, pix_fmt = video(
+            stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, dispositions, HWACC, codec, bit, copy
+        )
 
     for stream in audiostreams:
         if stream.tags is None:
             stream.tags = StreamTags()
         logger.info("Processing audio stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language})
-        arecoding, aindex, changealang = audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, dispositions, changealang, lang, copy_streams)
+        arecoding, aindex, changealang = audio(
+            stream,
+            ffmpeg_mapping,
+            ffmpeg_recoding,
+            arecoding,
+            aindex,
+            adefault,
+            astreams,
+            printlines,
+            dispositions,
+            changealang,
+            lang,
+            copy_streams,
+        )
 
     if aindex == 0:
         for stream in audiostreams:
-            arecoding = recode_audio(stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, copy_streams=copy_streams)
+            arecoding = recode_audio(
+                stream, ffmpeg_mapping, ffmpeg_recoding, arecoding, aindex, adefault, astreams, printlines, copy_streams=copy_streams
+            )
             aindex += 1
 
     for stream in subtitlestreams:
-        sindex, changeslang = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions, changeslang, sublang, subselector=subselector)
+        sindex, changeslang = subtitles(
+            stream,
+            ffmpeg_mapping,
+            ffmpeg_recoding,
+            sindex,
+            sdefault,
+            sstreams,
+            printlines,
+            dispositions,
+            changeslang,
+            sublang,
+            subselector=subselector,
+        )
 
     if sindex == 0:
         if subdir != "" and os.path.isdir(subdir):
@@ -321,7 +324,19 @@ def recode(
                     midlines.append(
                         f"{Color.BLUE}1:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
                     )
-                    sindex, changeslang = subtitles(stream, ffmpeg_mapping, ffmpeg_recoding, sindex, sdefault, sstreams, printlines, dispositions, changeslang, sublang, file=1)
+                    sindex, changeslang = subtitles(
+                        stream,
+                        ffmpeg_mapping,
+                        ffmpeg_recoding,
+                        sindex,
+                        sdefault,
+                        sstreams,
+                        printlines,
+                        dispositions,
+                        changeslang,
+                        sublang,
+                        file=1,
+                    )
         except Exception:
             ...
 
@@ -340,7 +355,9 @@ def recode(
                 stream.tags = StreamTags()
             if stream.codec_type == "video" and stream.codec_name == "mjpeg" and stream.tags.filename == "cover.jpg":
                 disposition = " ".join([dispo[0] for dispo in stream.disposition.to_dict().items() if dispo[1]])
-                midlines.append(f"{Color.BLUE}0:{stream.index} {Color.GREEN}attached picture {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.YELLOW}{disposition}{Style.RESET_ALL}")
+                midlines.append(
+                    f"{Color.BLUE}0:{stream.index} {Color.GREEN}attached picture {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
+                )
                 ffmpeg_mapping.extend(["-map", f"0:{stream.index}"])
                 ffmpeg_recoding.extend([f"-c:v:{vindex}", "mjpeg", f"-filter:v:{vindex}", "scale=-1:600"])
                 # ffmpeg_recoding.extend([f"-c:v:{vindex}", "copy"])
@@ -360,7 +377,11 @@ def recode(
             elif adefault["aindex"] == stream["newindex"] and dispositions.get("a" + str(stream["newindex"]), False):
                 if "default" not in dispositions["a" + str(stream["newindex"])].types:
                     dispositions["a" + str(stream["newindex"])].types.append("default")
-            elif adefault["aindex"] == stream["newindex"] and not dispositions.get("a" + str(stream["newindex"]), False) and not stream["disposition"].get("default", False):
+            elif (
+                adefault["aindex"] == stream["newindex"]
+                and not dispositions.get("a" + str(stream["newindex"]), False)
+                and not stream["disposition"].get("default", False)
+            ):
                 dispositions["a" + str(stream["newindex"])] = Dispositions(
                     stype="a",
                     index=stream["newindex"],
@@ -388,13 +409,17 @@ def recode(
     if len(changealang) > 0:
         for change in changealang:
             ffmpeg_dispositions.extend([f"-metadata:s:a:{change['index']}", f"language={change['lang']}"])
-            printlines.append(f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}a:{change['index']}{Style.RESET_ALL} language to {Color.MAGENTA}{change['lang']}{Style.RESET_ALL}")
+            printlines.append(
+                f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}a:{change['index']}{Style.RESET_ALL} language to {Color.MAGENTA}{change['lang']}{Style.RESET_ALL}"
+            )
             changedefault = True
 
     if len(changeslang) > 0:
         for change in changeslang:
             ffmpeg_dispositions.extend([f"-metadata:s:s:{change['index']}", f"language={change['lang']}"])
-            printlines.append(f"Setting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}s:{change['index']}{Style.RESET_ALL} language to {Color.MAGENTA}{change['lang']}{Style.RESET_ALL}")
+            printlines.append(
+                f"Setting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}s:{change['index']}{Style.RESET_ALL} language to {Color.MAGENTA}{change['lang']}{Style.RESET_ALL}"
+            )
             changedefault = True
 
     for disposition in dispositions.values():
@@ -447,19 +472,37 @@ def recode(
                 continue
             logger.info("Updating metadata tag", extra={"tag": tag})
             if tag not in format_tags:
-                printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
+                printlines.append(
+                    f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}None{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}"
+                )
             else:
-                printlines.append(f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}{format_tags[tag]}{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}")
+                printlines.append(
+                    f"Changing {Color.GREEN}{tag}{Style.RESET_ALL} from {Color.CYAN}{format_tags[tag]}{Style.RESET_ALL} to {Color.CYAN}{metadata[tag].strip()}{Style.RESET_ALL}"
+                )
             ffmpeg_metadata.extend(["-metadata", f"{tag}={metadata[tag].strip()}"])
             changemetadata = True
 
-    if not vrecoding and not arecoding and not changedefault and not changemetadata and os.path.realpath(file) == os.path.realpath(output_file):
+    if (
+        not vrecoding
+        and not arecoding
+        and not changedefault
+        and not changemetadata
+        and os.path.realpath(file) == os.path.realpath(output_file)
+    ):
         logger.info("No changes needed", extra={"file": file})
         print(f"{Color.RED}No changes to make: {Color.GREEN}{file} {Color.BLUE}Continuing...{Style.RESET_ALL}")
         return
-    if os.path.realpath(file) != os.path.realpath(output_file) and not vrecoding and not arecoding and not changedefault and not changemetadata:
+    if (
+        os.path.realpath(file) != os.path.realpath(output_file)
+        and not vrecoding
+        and not arecoding
+        and not changedefault
+        and not changemetadata
+    ):
         logger.info("Moving file", extra={"from": file, "to": os.path.realpath(output_file)})
-        print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}{file}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}")
+        print(
+            f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}{file}{Style.RESET_ALL} to {Color.MAGENTA}{os.path.realpath(output_file)}{Style.RESET_ALL}"
+        )
         shutil.move(os.path.realpath(file), os.path.realpath(output_file))
         return
 
@@ -516,7 +559,9 @@ def recode(
         print(line)
 
     try:
-        completed = ffrecode(os.path.realpath(file), tmpfile, ffmpeg_mapping, ffmpeg_recoding, ffmpeg_dispositions, ffmpeg_metadata, additional_files)
+        completed = ffrecode(
+            os.path.realpath(file), tmpfile, ffmpeg_mapping, ffmpeg_recoding, ffmpeg_dispositions, ffmpeg_metadata, additional_files
+        )
         if not completed:
             print(f"{Color.RED}Recoding failed, skipping moving file.{Style.RESET_ALL}")
             if os.path.exists(tmpfile):
@@ -528,7 +573,9 @@ def recode(
             shutil.move(os.path.realpath(file), os.path.realpath(file) + ".old")
 
         # Move tempfile to output_file
-        print(f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}tempfile{Style.RESET_ALL} to {Color.MAGENTA}{output_file}{Style.RESET_ALL}")
+        print(
+            f"{Color.RED}Moving{Style.RESET_ALL} {Color.YELLOW}tempfile{Style.RESET_ALL} to {Color.MAGENTA}{output_file}{Style.RESET_ALL}"
+        )
         try:
             shutil.move(tmpfile, output_file)
             os.chmod(output_file, 0o644)
@@ -735,7 +782,9 @@ def main():
                         if not os.path.exists(os.path.join(parentfolder, series, season)):
                             os.makedirs(os.path.join(parentfolder, series, season))
                         old = os.path.join(folder, dire, subdir)
-                        new = os.path.splitext(os.path.join(parentfolder, series, season, name))[0] + os.path.splitext(subdir)[1].replace("?", "")
+                        new = os.path.splitext(os.path.join(parentfolder, series, season, name))[0] + os.path.splitext(subdir)[1].replace(
+                            "?", ""
+                        )
                         if old != new:
                             print(f"Moving {Color.YELLOW}{old}{Style.RESET_ALL} to {Color.MAGENTA}{new}{Style.RESET_ALL}")
                             shutil.move(old, new)
