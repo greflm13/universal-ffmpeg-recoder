@@ -1,32 +1,24 @@
 import os
 import platform
 
+from PyInstaller.building.api import EXE, PYZ
+from PyInstaller.building.build_main import Analysis
+from PyInstaller.utils.hooks import collect_submodules
+
 app_name = os.environ.get("APP_NAME", "recode")
 build_os = os.environ.get("BUILD_OS", platform.system().lower())
 build_arch = os.environ.get("BUILD_ARCH", platform.machine())
 
 name = f"{app_name}-{build_os}-{build_arch}"
-
 datas = [("src/recode/languages.json", ".")]
+hiddenimports = collect_submodules("recode.modules")
 
 a = Analysis(
-    [
-        "src/recode/main.py",
-        "src/recode/modules/api.py",
-        "src/recode/modules/audio.py",
-        "src/recode/modules/datatypes.py",
-        "src/recode/modules/ffmpeg_utils.py",
-        "src/recode/modules/FileOperations.py",
-        "src/recode/modules/__init__.py",
-        "src/recode/modules/logger.py",
-        "src/recode/modules/parse_arguments.py",
-        "src/recode/modules/subs.py",
-        "src/recode/modules/video.py",
-    ],
+    ["src/recode/main.py"],
     pathex=[],
     binaries=[],
     datas=datas,
-    hiddenimports=[],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

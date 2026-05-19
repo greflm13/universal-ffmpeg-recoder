@@ -154,7 +154,7 @@ jobs:
       - name: Build package
         shell: bash
         run: |
-          pyinstaller recode.spec
+          pyinstaller build.spec
         env:
           APP_NAME: ${{ needs.version.outputs.name }}
           BUILD_OS: ${{ matrix.os }}
