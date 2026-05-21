@@ -17,6 +17,9 @@
     "evenBetterToml.schema.associations": {
       "**/pyproject.toml": "https://raw.githubusercontent.com/SchemaStore/schemastore/master/src/schemas/json/pyproject.json"
     },
+    "files.associations": {
+      "build.spec": "python"
+    },
   },
   "launch": {
     "version": "0.2.0",

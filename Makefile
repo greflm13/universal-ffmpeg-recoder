@@ -1,7 +1,7 @@
 .PHONY: build clean rebuild
 
 build:
-	pyinstaller recode.spec
+	pyinstaller build.spec
 
 clean:
 	rm -rf build dist __pycache__ *.pyc
@@ -9,10 +9,10 @@ clean:
 rebuild: clean build
 
 install:
-	pip install -e . --group dev
+	pip install .
 
-run:
-	recode
+dev:
+	pip install -e . --group dev
 
 lint:
 	ruff check .
