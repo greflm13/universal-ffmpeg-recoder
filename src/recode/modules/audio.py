@@ -4,7 +4,7 @@ from colorama import Style
 from recode.modules.datatypes import Dispositions, Stream, StreamTags
 from recode.modules.logger import logger
 
-AUDIO_PRIORITY = {"dts": 6, "flac": 5, "opus": 4, "truehd": 3, "eac3": 2}
+AUDIO_PRIORITY = {"dts": 6, "flac": 5, "truehd": 4, "opus": 3, "eac3": 2}
 
 
 def recode_audio(
