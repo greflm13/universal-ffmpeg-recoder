@@ -549,11 +549,11 @@ def recode(
             if stream["recoding"]:
                 idx = stream["newindex"]
                 chn = stream["channels"]
-                if chn <= 2:
+                if chn == 2:
                     ffmpeg_recoding.extend([f"-b:a:{idx}", "128k", f"-filter:a:{idx}", "channelmap=channel_layout=stereo"])
-                elif chn <= 6:
+                elif chn == 6:
                     ffmpeg_recoding.extend([f"-b:a:{idx}", "256k", f"-filter:a:{idx}", "channelmap=channel_layout=5.1"])
-                elif chn <= 8:
+                elif chn == 8:
                     ffmpeg_recoding.extend([f"-b:a:{idx}", "450k", f"-filter:a:{idx}", "channelmap=channel_layout=7.1"])
     for line in prelines:
         print(line)
