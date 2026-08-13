@@ -28,17 +28,15 @@
         "name": "Debug recode.py",
         "type": "debugpy",
         "request": "launch",
-        "program": "${workspaceFolder}/recode.py",
+        "module": "recode.main",
         "console": "integratedTerminal",
         "args": [
           "-t",
-          "film",
-          "-l",
-          "ger",
-          "-i",
-          "Das.Geheimnis.der.Mondprinzessin.German.2008.DVDRip.XviD-ViDEOWELT.avi"
+          "series",
+          "-o",
+          "/mnt/nfs/series/eng"
         ],
-        "cwd": "/home/user/Videos"
+        "cwd": "/mnt/nfs/qbittorrent/Downloads/TV - Eng/Derry.Girls.S02.REPACK.1080p.ALL4.WEB-DL.AAC2.0.H.264-TEiLiFiS"
       },
       {
         "name": "Generate Schema",

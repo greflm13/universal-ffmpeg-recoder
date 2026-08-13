@@ -253,28 +253,30 @@ def recode(
 
     for stream in videostreams:
         logger.info("Processing video stream", extra={"index": stream.index, "codec": stream.codec_name})
-        vrecoding, vindex, pix_fmt = video(
-            stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, dispositions, HWACC, codec, bit, copy
-        )
+        if stream.codec_name is not None:
+            vrecoding, vindex, pix_fmt = video(
+                stream, ffmpeg_mapping, ffmpeg_recoding, vrecoding, vindex, printlines, dispositions, HWACC, codec, bit, copy
+            )
 
     for stream in audiostreams:
         if stream.tags is None:
             stream.tags = StreamTags()
         logger.info("Processing audio stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language})
-        arecoding, aindex, changealang = audio(
-            stream,
-            ffmpeg_mapping,
-            ffmpeg_recoding,
-            arecoding,
-            aindex,
-            adefault,
-            astreams,
-            printlines,
-            dispositions,
-            changealang,
-            lang,
-            copy_streams,
-        )
+        if stream.codec_name is not None:
+            arecoding, aindex, changealang = audio(
+                stream,
+                ffmpeg_mapping,
+                ffmpeg_recoding,
+                arecoding,
+                aindex,
+                adefault,
+                astreams,
+                printlines,
+                dispositions,
+                changealang,
+                lang,
+                copy_streams,
+            )
 
     if aindex == 0:
         for stream in audiostreams:
@@ -284,19 +286,25 @@ def recode(
             aindex += 1
 
     for stream in subtitlestreams:
-        sindex, changeslang = subtitles(
-            stream,
-            ffmpeg_mapping,
-            ffmpeg_recoding,
-            sindex,
-            sdefault,
-            sstreams,
-            printlines,
-            dispositions,
-            changeslang,
-            sublang,
-            subselector=subselector,
+        if stream.tags is None:
+            stream.tags = StreamTags()
+        logger.info(
+            "Processing subtitle stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language}
         )
+        if stream.codec_name is not None:
+            sindex, changeslang = subtitles(
+                stream,
+                ffmpeg_mapping,
+                ffmpeg_recoding,
+                sindex,
+                sdefault,
+                sstreams,
+                printlines,
+                dispositions,
+                changeslang,
+                sublang,
+                subselector=subselector,
+            )
 
     if sindex == 0:
         if subdir != "" and os.path.isdir(subdir):
