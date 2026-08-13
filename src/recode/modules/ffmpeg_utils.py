@@ -97,6 +97,7 @@ def ffrecode(
     ffmpeg_dispositions: list,
     ffmpeg_metadata: list,
     additional_files: list | None = None,
+    dump_command: bool = False,
 ) -> bool:
     """
     Re-encodes a media file using ffmpeg with the specified arguments.
@@ -137,6 +138,8 @@ def ffrecode(
     @ffmpeg.on("start")
     def on_start(arguments: list[str]):
         logger.info("FFmpeg recoding started", extra={"cmd": " ".join(arguments)})
+        if dump_command:
+            print(arguments)
         print(f"Recoding started at {Color.GREEN}{timestart.isoformat()}{Style.RESET_ALL}")
 
     @ffmpeg.on("progress")

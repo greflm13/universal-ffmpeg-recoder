@@ -94,4 +94,5 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--metadata-only", help="Only change metadata, copy streams", required=False, action="store_true", dest="onlymetadata"
     )
+    parser.add_argument("--dump-command", help="Dump ffmpeg command", required=False, action="store_true", dest="dumpcommand")
     return parser.parse_args()

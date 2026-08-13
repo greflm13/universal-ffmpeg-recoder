@@ -55,6 +55,7 @@ def recode_series(
     omit_cover: bool = False,
     subselector: str | None = None,
     copy_streams: bool = False,
+    dump_command: bool = False,
 ):
     logger.info("Starting series recode process", extra={"folder": folder})
     if apitokens is None:
@@ -98,6 +99,7 @@ def recode_series(
                         omit_cover=omit_cover,
                         subselector=subselector,
                         copy_streams=copy_streams,
+                        dump_command=dump_command,
                     )
         else:
             season, name, metadata = get_episode(series, dire, seriesobj)
@@ -120,6 +122,7 @@ def recode_series(
                     omit_cover=omit_cover,
                     subselector=subselector,
                     copy_streams=copy_streams,
+                    dump_command=dump_command,
                 )
 
 
@@ -142,6 +145,7 @@ def recode(
     omit_cover: bool = False,
     subselector: str | None = None,
     copy_streams: bool = False,
+    dump_command: bool = False,
 ):
     logger.info("Recode parameters", extra={"codec": codec, "bit": bit, "type": stype, "copy": copy, "omit_cover": omit_cover})
     prelines = []
@@ -560,7 +564,14 @@ def recode(
 
     try:
         completed = ffrecode(
-            os.path.realpath(file), tmpfile, ffmpeg_mapping, ffmpeg_recoding, ffmpeg_dispositions, ffmpeg_metadata, additional_files
+            os.path.realpath(file),
+            tmpfile,
+            ffmpeg_mapping,
+            ffmpeg_recoding,
+            ffmpeg_dispositions,
+            ffmpeg_metadata,
+            additional_files,
+            dump_command,
         )
         if not completed:
             print(f"{Color.RED}Recoding failed, skipping moving file.{Style.RESET_ALL}")
@@ -653,6 +664,7 @@ def main():
                     omit_cover=args.omitcover,
                     subselector=args.subselector,
                     copy_streams=args.onlymetadata,
+                    dump_command=args.dumpcommand,
                 )
             else:
                 error = f'File "{args.inputfile}" does not exist or is a directory.'
@@ -678,6 +690,7 @@ def main():
                         omit_cover=args.omitcover,
                         subselector=args.subselector,
                         copy_streams=args.onlymetadata,
+                        dump_command=args.dumpcommand,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -709,6 +722,7 @@ def main():
                         omit_cover=args.omitcover,
                         subselector=args.subselector,
                         copy_streams=args.onlymetadata,
+                        dump_command=args.dumpcommand,
                     )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -739,6 +753,7 @@ def main():
                     omit_cover=args.omitcover,
                     subselector=args.subselector,
                     copy_streams=args.onlymetadata,
+                    dump_command=args.dumpcommand,
                 )
             else:
                 error = f'Directory "{args.inputdir}" does not exist'
@@ -761,6 +776,7 @@ def main():
                 omit_cover=args.omitcover,
                 subselector=args.subselector,
                 copy_streams=args.onlymetadata,
+                dump_command=args.dumpcommand,
             )
     elif args.contentype == "rename":
         logger.info("Processing rename operation")
