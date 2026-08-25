@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+import json
 import os
 import re
 import shutil
 import sys
 import tempfile
+from pathlib import Path
 
 from colorama import Fore as Color
 from colorama import Style
@@ -37,6 +39,17 @@ elif os.path.exists("/usr/lib/libcuda.so"):
     HWACC = "CUDA"
 else:
     HWACC = None
+
+
+def resource_path(*parts: str) -> Path:
+    if getattr(sys, "frozen", False):
+        base = Path(sys._MEIPASS)  # type: ignore
+    else:
+        base = Path(__file__).resolve().parents[0]
+    return base.joinpath(*parts)
+
+
+LANGUAGES = json.loads(resource_path("languages.json").read_text())
 
 
 def recode_series(
@@ -162,6 +175,8 @@ def recode(
 
     changealang: list[dict[str, str]] = []
     changeslang: list[dict[str, str]] = []
+    changeaname: list[dict[str, str]] = []
+    changesname: list[dict[str, str]] = []
     dispositions: dict[str, Dispositions] = {}
 
     astreams = []
@@ -263,7 +278,7 @@ def recode(
             stream.tags = StreamTags()
         logger.info("Processing audio stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language})
         if stream.codec_name is not None:
-            arecoding, aindex, changealang = audio(
+            arecoding, aindex, changealang, changeaname = audio(
                 stream,
                 ffmpeg_mapping,
                 ffmpeg_recoding,
@@ -274,6 +289,7 @@ def recode(
                 printlines,
                 dispositions,
                 changealang,
+                changeaname,
                 lang,
                 copy_streams,
             )
@@ -292,7 +308,7 @@ def recode(
             "Processing subtitle stream", extra={"index": stream.index, "codec": stream.codec_name, "language": stream.tags.language}
         )
         if stream.codec_name is not None:
-            sindex, changeslang = subtitles(
+            sindex, changeslang, changesname = subtitles(
                 stream,
                 ffmpeg_mapping,
                 ffmpeg_recoding,
@@ -302,6 +318,7 @@ def recode(
                 printlines,
                 dispositions,
                 changeslang,
+                changesname,
                 sublang,
                 subselector=subselector,
             )
@@ -336,7 +353,7 @@ def recode(
                     midlines.append(
                         f"{Color.BLUE}1:{stream.index} {Color.GREEN}{stream.codec_type} {Color.CYAN}{stream.tags.title} {Color.RED}{stream.codec_name} {Color.MAGENTA}{stream.tags.language} {Color.YELLOW}{disposition}{Style.RESET_ALL}"
                     )
-                    sindex, changeslang = subtitles(
+                    sindex, changeslang, changesname = subtitles(
                         stream,
                         ffmpeg_mapping,
                         ffmpeg_recoding,
@@ -346,6 +363,7 @@ def recode(
                         printlines,
                         dispositions,
                         changeslang,
+                        changesname,
                         sublang,
                         file=1,
                     )
@@ -426,11 +444,27 @@ def recode(
             )
             changedefault = True
 
+    if len(changeaname) > 0:
+        for change in changeaname:
+            ffmpeg_dispositions.extend([f"-metadata:s:a:{change['index']}", f"title={change['name']}"])
+            printlines.append(
+                f"Setting {Color.GREEN}audio{Style.RESET_ALL} stream {Color.BLUE}a:{change['index']}{Style.RESET_ALL} title to {Color.CYAN}{change['name']}{Style.RESET_ALL}"
+            )
+            changedefault = True
+
     if len(changeslang) > 0:
         for change in changeslang:
             ffmpeg_dispositions.extend([f"-metadata:s:s:{change['index']}", f"language={change['lang']}"])
             printlines.append(
                 f"Setting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}s:{change['index']}{Style.RESET_ALL} language to {Color.MAGENTA}{change['lang']}{Style.RESET_ALL}"
+            )
+            changedefault = True
+
+    if len(changesname) > 0:
+        for change in changesname:
+            ffmpeg_dispositions.extend([f"-metadata:s:s:{change['index']}", f"title={change['name']}"])
+            printlines.append(
+                f"Setting {Color.GREEN}subtitle{Style.RESET_ALL} stream {Color.BLUE}s:{change['index']}{Style.RESET_ALL} title to {Color.CYAN}{change['name']}{Style.RESET_ALL}"
             )
             changedefault = True
 
@@ -623,7 +657,7 @@ def main():
     if not os.path.exists:
         os.makedirs(configpath)
 
-    args = parse_args()
+    args = parse_args([lang["code"] for lang in LANGUAGES])
     logger.info("Arguments received", extra={"type": args.contentype, "codec": args.codec, "bit": args.bit})
 
     if args.hwaccel is False:

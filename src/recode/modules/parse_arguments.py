@@ -1,24 +1,12 @@
 import argparse
-import json
-import sys
 from importlib.metadata import version
-from pathlib import Path
 
 from rich_argparse import RichHelpFormatter
 
 __version__ = version("universal-ffmpeg-recoder")
 
 
-def resource_path(*parts: str) -> Path:
-    if getattr(sys, "frozen", False):
-        base = Path(sys._MEIPASS)  # type: ignore
-    else:
-        base = Path(__file__).resolve().parents[1]
-    return base.joinpath(*parts)
-
-
-def parse_args() -> argparse.Namespace:
-    languages = json.loads(resource_path("languages.json").read_text())
+def parse_args(languages: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Recode media to common format", formatter_class=RichHelpFormatter)
     parser.add_argument(
         "-l",

@@ -1,9 +1,23 @@
+import json
+import sys
+from pathlib import Path
+
 from colorama import Fore as Color
 from colorama import Style
 
 from recode.modules.datatypes import Dispositions, Stream, StreamTags
 from recode.modules.logger import logger
 
+
+def resource_path(*parts: str) -> Path:
+    if getattr(sys, "frozen", False):
+        base = Path(sys._MEIPASS)  # type: ignore
+    else:
+        base = Path(__file__).resolve().parents[1]
+    return base.joinpath(*parts)
+
+
+LANGUAGES = json.loads(resource_path("languages.json").read_text())
 AUDIO_PRIORITY = {"dts": 6, "flac": 5, "truehd": 4, "opus": 3, "eac3": 2}
 
 
@@ -87,6 +101,7 @@ def audio(
     printlines: list,
     dispositions: dict[str, Dispositions],
     changealang: list,
+    changeaname: list,
     lang: str = "eng",
     copy_streams: bool = False,
 ):
@@ -110,5 +125,12 @@ def audio(
         elif stream.tags.language in ["und", None]:
             changealang.append({"index": aindex, "lang": lang})
             stream.tags.language = lang
+        if stream.tags.title is None:
+            name = ""
+            for code in LANGUAGES:
+                if code["code"] == lang:
+                    name = code["name"]
+            changeaname.append({"index": aindex, "name": name})
+            stream.tags.title = name
         aindex += 1
-    return arecoding, aindex, changealang
+    return arecoding, aindex, changealang, changeaname

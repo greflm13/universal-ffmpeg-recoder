@@ -1,4 +1,7 @@
+import json
 import re
+import sys
+from pathlib import Path
 
 from colorama import Fore as Color
 from colorama import Style
@@ -6,6 +9,16 @@ from colorama import Style
 from recode.modules.datatypes import Dispositions, Stream, StreamTags
 from recode.modules.logger import logger
 
+
+def resource_path(*parts: str) -> Path:
+    if getattr(sys, "frozen", False):
+        base = Path(sys._MEIPASS)  # type: ignore
+    else:
+        base = Path(__file__).resolve().parents[1]
+    return base.joinpath(*parts)
+
+
+LANGUAGES = json.loads(resource_path("languages.json").read_text())
 SUBTITLE_PRIORITY = {"forced": 4, "full": 3, "none": 1}
 
 
@@ -19,6 +32,7 @@ def subtitles(
     printlines: list,
     dispositions: dict[str, Dispositions],
     changeslang: list,
+    changesname: list,
     lang: str,
     subselector: str | None = None,
     file=0,
@@ -60,9 +74,16 @@ def subtitles(
             lang=stream.tags.language,
             types=dispositiontypes,
         )
+        if stream.tags.title is None:
+            name = ""
+            for code in LANGUAGES:
+                if code["code"] == lang:
+                    name = code["name"]
+            changesname.append({"index": sindex, "name": name})
+            stream.tags.title = name
         update_subtitle_default(sdefault, stream, sindex, dispositions, lang, subselector=subselector)
         sindex += 1
-    return sindex, changeslang
+    return sindex, changeslang, changesname
 
 
 def update_subtitle_default(
