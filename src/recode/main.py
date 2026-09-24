@@ -595,8 +595,12 @@ def recode(
                     ffmpeg_recoding.extend([f"-b:a:{idx}", "128k", f"-filter:a:{idx}", "channelmap=channel_layout=mono"])
                 elif chn == 2:
                     ffmpeg_recoding.extend([f"-b:a:{idx}", "128k", f"-filter:a:{idx}", "channelmap=channel_layout=stereo"])
+                elif chn == 5:
+                    ffmpeg_recoding.extend([f"-b:a:{idx}", "256k", f"-filter:a:{idx}", "channelmap=channel_layout=5.0"])
                 elif chn == 6:
                     ffmpeg_recoding.extend([f"-b:a:{idx}", "256k", f"-filter:a:{idx}", "channelmap=channel_layout=5.1"])
+                elif chn == 7:
+                    ffmpeg_recoding.extend([f"-b:a:{idx}", "450k", f"-filter:a:{idx}", "channelmap=channel_layout=7.0"])
                 elif chn == 8:
                     ffmpeg_recoding.extend([f"-b:a:{idx}", "450k", f"-filter:a:{idx}", "channelmap=channel_layout=7.1"])
     for line in prelines:
