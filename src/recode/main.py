@@ -872,7 +872,7 @@ def main():
         series = os.path.basename(folder)
         logger.info("Change season type info", extra={"folder": folder, "series": series})
         parentfolder = os.path.realpath(folder).removesuffix(f"/{series}")
-        currseriesobj, destseriesobj, seriesname, year = change_season_type(series, apitokens["thetvdb"], lang=infolang)
+        currseriesobj, destseriesobj, seriesname, year = change_season_type(series, apitokens["thetvdb"], lang=infolang, searchstring=args.searchstring)
         if currseriesobj is None or destseriesobj is None:
             logger.error("Failed to retrieve series info for season type change", extra={"series": series})
             return
